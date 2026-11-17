@@ -8,7 +8,7 @@ import type {
   UserFilters,
   UserPayload,
   Wrapped,
-} from './types'
+} from './types.js'
 
 /** Où stocker le jeton : localStorage sur le web, stockage sécurisé sur mobile. */
 export interface TokenStorage {

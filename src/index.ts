@@ -1,3 +1,3 @@
-export * from './types'
-export * from './permissions'
-export * from './client'
+export * from './types.js'
+export * from './permissions.js'
+export * from './client.js'

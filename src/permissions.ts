@@ -1,4 +1,4 @@
-import type { CurrentUser, RoleName } from './types'
+import type { CurrentUser, RoleName } from './types.js'
 
 /**
  * Règles de droits côté interface.
