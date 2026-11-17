@@ -17,13 +17,14 @@ if (can(user, 'users.view')) { /* … */ }
 
 ## Installation dans un projet
 
-Le paquet est installé directement depuis GitHub, à une version figée par un tag :
+Le paquet est installé directement depuis GitHub :
 
 ```json
-"dependencies": { "@dash4/shared": "github:desmond8500/dash4-shared#v0.1.0" }
+"dependencies": { "@dash4/shared": "github:desmond8500/dash4-shared#main" }
 ```
 
-npm lance `prepare`, qui compile `src/` vers `dist/`.
+npm lance `prepare`, qui compile `src/` vers `dist/`. Le `package-lock.json` du projet fige le commit utilisé ;
+`npm update @dash4/shared` récupère la dernière version de `main`.
 
 ## Développement
 
@@ -34,6 +35,6 @@ npm run typecheck
 npm run build
 ```
 
-À chaque changement de l'API (dash4-api), mettre à jour `src/types.ts`, publier un nouveau tag (`v0.2.0`…) et monter la version dans dash4-web et dash4-mobile.
+À chaque changement de l'API (dash4-api), mettre à jour `src/types.ts` et la version dans `package.json`, puis lancer `npm update @dash4/shared` dans dash4-web et dash4-mobile. Des tags (`v0.2.0`…) peuvent être ajoutés depuis GitHub pour figer des versions.
 
 Les règles de droits (`can`, `canSee`, `isTechnician`…) ne font que **cacher** ce que l'API refuse déjà : la vérification réelle est toujours faite par le serveur.
