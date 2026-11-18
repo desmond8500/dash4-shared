@@ -71,7 +71,9 @@ export function createApiClient(options: ApiClientOptions) {
   async function request<T>(method: string, path: string, body?: unknown, query?: Query): Promise<T> {
     const token = await options.storage.get()
     const headers: Record<string, string> = { Accept: 'application/json' }
-    if (body !== undefined) headers['Content-Type'] = 'application/json'
+    // Envoi de fichier : le navigateur fixe lui-même le Content-Type multipart
+    const isForm = typeof FormData !== 'undefined' && body instanceof FormData
+    if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json'
     if (token) headers.Authorization = `Bearer ${token}`
 
     let response: Response
@@ -79,7 +81,7 @@ export function createApiClient(options: ApiClientOptions) {
       response = await doFetch(`${baseUrl}/v1/${path.replace(/^\/+/, '')}${toQueryString(query)}`, {
         method,
         headers,
-        body: body === undefined ? undefined : JSON.stringify(body),
+        body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
       })
     } catch {
       throw new ApiError(0, 'Impossible de joindre le serveur. Vérifiez votre connexion.')
@@ -165,6 +167,15 @@ export function createApiClient(options: ApiClientOptions) {
       },
       async remove(id: number): Promise<void> {
         await request('DELETE', `clients/${id}`)
+      },
+      /** Logo : JPEG, PNG ou WebP de 2 Mo au plus. Renvoie la fiche avec `logo_url`. */
+      async uploadLogo(id: number, file: Blob, filename = 'logo'): Promise<Client> {
+        const form = new FormData()
+        form.append('logo', file, filename)
+        return (await request<Wrapped<Client>>('POST', `clients/${id}/logo`, form)).data
+      },
+      async removeLogo(id: number): Promise<Client> {
+        return (await request<Wrapped<Client>>('DELETE', `clients/${id}/logo`)).data
       },
     },
 

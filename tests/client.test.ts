@@ -120,4 +120,19 @@ describe('client API', () => {
 
     expect(fetch.mock.calls[0]?.[0]).toBe('https://api.test/api/v1/contacts?page=1&per_page=500')
   })
+
+  it('envoie le logo en multipart, sans Content-Type JSON', async () => {
+    const fetch = vi.fn().mockResolvedValue(jsonResponse(200, { data: { id: 7, logo_url: 'https://x/logo.png' } }))
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+
+    const client = await api.clients.uploadLogo(7, new Blob(['png'], { type: 'image/png' }), 'logo.png')
+
+    const [url, init] = fetch.mock.calls[0] ?? []
+    expect(url).toBe('https://api.test/api/v1/clients/7/logo')
+    expect(init.body).toBeInstanceOf(FormData)
+    expect((init.body as FormData).get('logo')).toBeInstanceOf(Blob)
+    expect(init.headers['Content-Type']).toBeUndefined()
+    expect(init.headers.Authorization).toBe('Bearer t')
+    expect(client.logo_url).toBe('https://x/logo.png')
+  })
 })

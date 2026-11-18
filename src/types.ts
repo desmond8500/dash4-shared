@@ -203,6 +203,8 @@ export interface Client {
   description: string | null
   address: string | null
   is_favorite: boolean
+  /** Adresse publique du logo, ou null. */
+  logo_url: string | null
   contacts_count?: number
   /** Présents seulement sur la fiche (GET /clients/{id}). */
   contacts?: Contact[]
