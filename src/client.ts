@@ -4,6 +4,20 @@ import type {
   DeliveryNotePayload,
   QuoteDepositPayload,
   QuoteEmailDraft,
+  Article,
+  ArticleFilters,
+  ArticlePayload,
+  Brand,
+  Provider,
+  ProviderPayload,
+  Purchase,
+  PurchaseFilters,
+  PurchaseLinePayload,
+  PurchasePayload,
+  PurchaseReceivePayload,
+  StockMovement,
+  StockMovementPayload,
+  StockSummary,
   Invoice,
   InvoiceCreatePayload,
   InvoiceFilters,
@@ -479,6 +493,14 @@ export function createApiClient(options: ApiClientOptions) {
       async removeDeliveryNote(noteId: number): Promise<Quote> {
         return (await request<Wrapped<Quote>>('DELETE', `delivery-notes/${noteId}`)).data
       },
+      /** Matériel livré : les lignes liées à un article sortent du stock (tout ou rien). */
+      async releaseDeliveryNote(noteId: number): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('POST', `delivery-notes/${noteId}/release`)).data
+      },
+      /** Annule la sortie : les articles reviennent en stock. */
+      async restockDeliveryNote(noteId: number): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('POST', `delivery-notes/${noteId}/restock`)).data
+      },
       deliveryNotePdf(noteId: number): Promise<Blob> {
         return requestBlob(`delivery-notes/${noteId}/pdf`)
       },
@@ -546,6 +568,133 @@ export function createApiClient(options: ApiClientOptions) {
       },
       async send(id: number, payload: Omit<QuoteEmailPayload, 'attach_proposal'>): Promise<Invoice> {
         return (await request<Wrapped<Invoice>>('POST', `invoices/${id}/send`, payload)).data
+      },
+    },
+
+    brands: {
+      async list(search?: string): Promise<Brand[]> {
+        return (await request<Wrapped<Brand[]>>('GET', 'brands', undefined, { search })).data
+      },
+      async create(payload: { name: string; description?: string | null; website?: string | null }): Promise<Brand> {
+        return (await request<Wrapped<Brand>>('POST', 'brands', payload)).data
+      },
+      async update(id: number, payload: { name?: string; description?: string | null; website?: string | null }): Promise<Brand> {
+        return (await request<Wrapped<Brand>>('PATCH', `brands/${id}`, payload)).data
+      },
+      /** Refusé tant que la marque a des articles. */
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `brands/${id}`)
+      },
+    },
+
+    providers: {
+      list(filters: SyncFilters & { search?: string } = {}): Promise<SyncPaginated<Provider>> {
+        return request('GET', 'providers', undefined, { ...filters })
+      },
+      async get(id: number): Promise<Provider> {
+        return (await request<Wrapped<Provider>>('GET', `providers/${id}`)).data
+      },
+      async create(payload: ProviderPayload & { name: string }): Promise<Provider> {
+        return (await request<Wrapped<Provider>>('POST', 'providers', payload)).data
+      },
+      async update(id: number, payload: ProviderPayload): Promise<Provider> {
+        return (await request<Wrapped<Provider>>('PATCH', `providers/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `providers/${id}`)
+      },
+    },
+
+    /** Articles du stock : quantité changée seulement par les mouvements (`stock.move`). */
+    articles: {
+      list(filters: ArticleFilters = {}): Promise<SyncPaginated<Article>> {
+        const { low, active, ...rest } = filters
+        return request('GET', 'articles', undefined, {
+          ...rest,
+          ...(low ? { low: 1 } : {}),
+          ...(active === undefined ? {} : { active: active === 'all' ? 'all' : active ? 1 : 0 }),
+        })
+      },
+      async summary(): Promise<StockSummary> {
+        return (await request<Wrapped<StockSummary>>('GET', 'articles/summary')).data
+      },
+      /** Fiche : articles liés et 50 derniers mouvements. */
+      async get(id: number): Promise<Article> {
+        return (await request<Wrapped<Article>>('GET', `articles/${id}`)).data
+      },
+      /** Code-barres ou référence exacte (scan). */
+      async findByBarcode(code: string): Promise<Article | null> {
+        const result = await request<SyncPaginated<Article>>('GET', 'articles', undefined, { barcode: code, active: 'all' })
+        return result.data[0] ?? null
+      },
+      async create(payload: ArticlePayload & { designation: string }): Promise<Article> {
+        return (await request<Wrapped<Article>>('POST', 'articles', payload)).data
+      },
+      async update(id: number, payload: ArticlePayload): Promise<Article> {
+        return (await request<Wrapped<Article>>('PATCH', `articles/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `articles/${id}`)
+      },
+      async uploadImage(id: number, file: Blob, filename = 'image'): Promise<Article> {
+        const form = new FormData()
+        form.append('image', file, filename)
+        return (await request<Wrapped<Article>>('POST', `articles/${id}/image`, form)).data
+      },
+      async removeImage(id: number): Promise<Article> {
+        return (await request<Wrapped<Article>>('DELETE', `articles/${id}/image`)).data
+      },
+      async setDependencies(id: number, items: Array<{ article_id: number; quantity: number }>): Promise<Article> {
+        return (await request<Wrapped<Article>>('PUT', `articles/${id}/dependencies`, { items })).data
+      },
+      /** Entrée, sortie ou inventaire ; renvoie l'article à jour. */
+      async move(id: number, payload: StockMovementPayload): Promise<Article> {
+        return (await request<Wrapped<Article>>('POST', `articles/${id}/movements`, payload)).data
+      },
+      movements(filters: { article_id?: number; project_id?: number; type?: string; from?: string; to?: string; page?: number; per_page?: number } = {}): Promise<Paginated<StockMovement>> {
+        return request('GET', 'stock-movements', undefined, { ...filters })
+      },
+    },
+
+    /** Achats : brouillon → commandé → reçu en partie → reçu. */
+    purchases: {
+      list(filters: PurchaseFilters = {}): Promise<SyncPaginated<Purchase>> {
+        const { open, ...rest } = filters
+        return request('GET', 'purchases', undefined, { ...rest, ...(open ? { open: 1 } : {}) })
+      },
+      async get(id: number): Promise<Purchase> {
+        return (await request<Wrapped<Purchase>>('GET', `purchases/${id}`)).data
+      },
+      async create(payload: PurchasePayload & { provider_id: number }): Promise<Purchase> {
+        return (await request<Wrapped<Purchase>>('POST', 'purchases', payload)).data
+      },
+      async update(id: number, payload: Omit<PurchasePayload, 'lines' | 'low_stock' | 'client_uuid'>): Promise<Purchase> {
+        return (await request<Wrapped<Purchase>>('PATCH', `purchases/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `purchases/${id}`)
+      },
+      async addLine(id: number, payload: PurchaseLinePayload): Promise<Purchase> {
+        return (await request<Wrapped<Purchase>>('POST', `purchases/${id}/lines`, payload)).data
+      },
+      async updateLine(lineId: number, payload: PurchaseLinePayload): Promise<Purchase> {
+        return (await request<Wrapped<Purchase>>('PATCH', `purchase-lines/${lineId}`, payload)).data
+      },
+      async removeLine(lineId: number): Promise<Purchase> {
+        return (await request<Wrapped<Purchase>>('DELETE', `purchase-lines/${lineId}`)).data
+      },
+      async order(id: number, payload: { ordered_at?: string; expected_at?: string | null } = {}): Promise<Purchase> {
+        return (await request<Wrapped<Purchase>>('POST', `purchases/${id}/order`, payload)).data
+      },
+      async cancel(id: number): Promise<Purchase> {
+        return (await request<Wrapped<Purchase>>('POST', `purchases/${id}/cancel`)).data
+      },
+      async receive(id: number, payload: PurchaseReceivePayload = {}): Promise<Purchase> {
+        return (await request<Wrapped<Purchase>>('POST', `purchases/${id}/receive`, payload)).data
+      },
+      /** Bon de commande (`costs.view`). */
+      pdf(id: number): Promise<Blob> {
+        return requestBlob(`purchases/${id}/pdf`)
       },
     },
 

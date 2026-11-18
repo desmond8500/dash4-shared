@@ -402,7 +402,7 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
 export const ACTIVE_PROJECT_STATUSES: ProjectStatus[] = ['planned', 'in_progress', 'on_hold']
 
 /** Fiches qui acceptent notes, liens et documents (segment de l'adresse de l'API). */
-export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices'
+export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'providers' | 'purchases'
 
 export interface Note {
   id: number
@@ -746,7 +746,9 @@ export interface QuotePayload {
 }
 
 export interface QuoteLinePayload {
-  designation: string
+  /** Article du stock : désignation, catégorie, coût et coefficient repris de l'article (sauf ce qui est envoyé). */
+  article_id?: number | null
+  designation?: string
   reference?: string | null
   comment?: string | null
   category?: QuoteLineCategory
@@ -836,6 +838,8 @@ export const DELIVERY_NOTE_TYPE_LABELS: Record<DeliveryNoteType, string> = {
 
 export interface DeliveryNoteLine {
   id?: number
+  /** Article du stock : sort du stock quand le bordereau est livré. */
+  article_id?: number | null
   designation: string
   reference: string | null
   unit: string | null
@@ -851,6 +855,8 @@ export interface DeliveryNote {
   done: string | null
   todo: string | null
   show_logo: boolean
+  /** Rempli quand le matériel est sorti du stock. */
+  stock_released_at: string | null
   lines: DeliveryNoteLine[]
 }
 
@@ -1142,4 +1148,245 @@ export interface InvoicePaymentPayload {
   method: PaymentMethod
   reference?: string | null
   note?: string | null
+}
+
+// ---------------------------------------------------------------------------
+// Stock : marques, fournisseurs, articles, mouvements (`stock.*`)
+// ---------------------------------------------------------------------------
+
+export interface Brand {
+  id: number
+  name: string
+  description: string | null
+  website: string | null
+  articles_count: number
+}
+
+export interface Provider {
+  id: number
+  client_uuid: string | null
+  name: string
+  contact_name: string | null
+  phone: string | null
+  email: string | null
+  address: string | null
+  website: string | null
+  description: string | null
+  articles_count: number
+  updated_at: string | null
+  deleted_at: string | null
+}
+
+export type ProviderPayload = Partial<Omit<Provider, 'id' | 'articles_count' | 'updated_at' | 'deleted_at'>> & { name?: string }
+
+export type StockMovementType = 'in' | 'out' | 'inventory' | 'purchase' | 'delivery'
+
+export const STOCK_MOVEMENT_LABELS: Record<StockMovementType, string> = {
+  in: 'Entrée',
+  out: 'Sortie',
+  inventory: 'Inventaire',
+  purchase: "Réception d'achat",
+  delivery: 'Bordereau de livraison',
+}
+
+export interface StockMovement {
+  id: number
+  client_uuid: string | null
+  article_id: number
+  article?: { id: number; designation: string; reference: string | null; unit: string | null } | null
+  type: Labelled<StockMovementType>
+  /** Positif : entrée ; négatif : sortie. */
+  quantity: number
+  quantity_after: number
+  reason: string | null
+  source: { type: string; id: number; number: string | null; quote_id: number | null } | null
+  project_id: number | null
+  project?: { id: number; name: string } | null
+  /** `costs.view`. */
+  unit_cost?: number | null
+  creator?: UserRef | null
+  moved_at: string | null
+}
+
+export interface Article {
+  id: number
+  client_uuid: string | null
+  designation: string
+  reference: string | null
+  barcode: string | null
+  description: string | null
+  category: Labelled<QuoteLineCategory>
+  unit: string | null
+  brand_id: number | null
+  brand?: { id: number; name: string } | null
+  provider_id: number | null
+  provider?: { id: number; name: string } | null
+  quantity: number
+  min_quantity: number | null
+  is_low: boolean
+  location: string | null
+  weight: number | null
+  image_url: string | null
+  is_active: boolean
+  /** `prices.view` : coût × coefficient. */
+  unit_price?: number
+  /** `costs.view`. */
+  unit_cost?: number
+  coefficient?: number
+  stock_value?: number
+  /** Sur la fiche. */
+  dependencies?: Array<{ id: number; designation: string; reference: string | null; unit: string | null; quantity: number; stock: number }>
+  movements?: StockMovement[]
+  can: { update: boolean; delete: boolean; move: boolean }
+  created_at: string | null
+  updated_at: string | null
+  deleted_at: string | null
+}
+
+export interface ArticleFilters extends SyncFilters {
+  search?: string
+  barcode?: string
+  brand_id?: number
+  provider_id?: number
+  /** Plusieurs catégories séparées par des virgules. */
+  category?: string
+  low?: boolean
+  /** `all` : actifs et inactifs. */
+  active?: boolean | 'all'
+}
+
+export interface ArticlePayload {
+  client_uuid?: string
+  designation?: string
+  reference?: string | null
+  barcode?: string | null
+  description?: string | null
+  category?: QuoteLineCategory
+  unit?: string | null
+  brand_id?: number | null
+  provider_id?: number | null
+  /** `costs.view`. */
+  unit_cost?: number
+  coefficient?: number
+  min_quantity?: number | null
+  location?: string | null
+  weight?: number | null
+  is_active?: boolean
+  /** À la création : enregistrée comme un inventaire. */
+  initial_quantity?: number | null
+}
+
+export interface StockMovementPayload {
+  client_uuid?: string
+  type: 'in' | 'out' | 'inventory'
+  /** Inventaire : la quantité comptée. */
+  quantity: number
+  reason?: string | null
+  project_id?: number | null
+  moved_at?: string
+}
+
+export interface StockSummary {
+  articles: number
+  low: number
+  out: number
+  /** `costs.view`. */
+  stock_value?: number
+}
+
+// ---------------------------------------------------------------------------
+// Achats (`purchases.*`) — montants avec `costs.view`
+// ---------------------------------------------------------------------------
+
+export type PurchaseStatus = 'draft' | 'ordered' | 'partially_received' | 'received' | 'cancelled'
+
+export interface PurchaseLine {
+  id: number
+  position: number
+  article_id: number | null
+  article: { id: number; designation: string; quantity: number } | null
+  designation: string
+  reference: string | null
+  unit: string | null
+  quantity: number
+  received_quantity: number
+  remaining_quantity: number
+  unit_cost?: number
+  line_total?: number
+}
+
+export interface Purchase {
+  id: number
+  client_uuid: string | null
+  number: string
+  title: string | null
+  status: Labelled<PurchaseStatus>
+  provider_id: number
+  provider?: { id: number; name: string; phone?: string | null; email?: string | null } | null
+  project_id: number | null
+  project?: { id: number; name: string } | null
+  ordered_at: string | null
+  expected_at: string | null
+  is_late: boolean
+  received_at: string | null
+  tax_mode: Labelled<TaxMode>
+  vat_rate: number
+  subtotal?: number
+  tax_amount?: number
+  total?: number
+  notes: string | null
+  lines?: PurchaseLine[]
+  receptions?: Array<{
+    id: number
+    received_at: string | null
+    lines: Array<{ purchase_line_id: number; article_id: number | null; designation: string; quantity: number }>
+    note: string | null
+    receiver: UserRef | null
+  }>
+  creator?: UserRef | null
+  can: { update: boolean; edit: boolean; order: boolean; receive: boolean; delete: boolean }
+  created_at: string | null
+  updated_at: string | null
+  deleted_at: string | null
+}
+
+export interface PurchaseFilters extends SyncFilters {
+  search?: string
+  status?: string
+  /** Commandés, pas encore tout reçus. */
+  open?: boolean
+  provider_id?: number
+  project_id?: number
+}
+
+export interface PurchaseLinePayload {
+  article_id?: number | null
+  designation?: string
+  reference?: string | null
+  unit?: string | null
+  quantity?: number
+  /** `costs.view`. */
+  unit_cost?: number
+}
+
+export interface PurchasePayload {
+  client_uuid?: string
+  provider_id?: number
+  project_id?: number | null
+  title?: string | null
+  expected_at?: string | null
+  tax_mode?: 'vat' | 'none'
+  notes?: string | null
+  /** À la création : articles de ce fournisseur sous leur seuil. */
+  low_stock?: boolean
+  lines?: PurchaseLinePayload[]
+}
+
+export interface PurchaseReceivePayload {
+  /** Absent : tout le reste à recevoir. */
+  lines?: Array<{ id: number; quantity: number }>
+  received_at?: string
+  note?: string | null
+  /** Oui par défaut : le coût des articles prend le prix d'achat. */
+  update_costs?: boolean
 }

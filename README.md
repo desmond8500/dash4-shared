@@ -51,3 +51,9 @@ Les règles de droits (`can`, `canSee`, `isTechnician`…) ne font que **cacher*
 (depuis un devis : `{ quote_id, scope, percent, title }` ; depuis un acompte : `{ quote_deposit_id }` ; libre :
 `{ client_id, title }`), `update`, lignes, `issue`, `cancel`, `addPayment` / `removePayment`, `pdf`, `emailDraft`, `send`.
 Listes `INVOICE_SCOPES` et `PAYMENT_METHODS` pour les formulaires.
+
+### Stock et achats (0.11.0)
+
+`api.brands`, `api.providers`, `api.articles` (`list` avec `low`, `barcode`, `category`… ; `findByBarcode` pour le scan ;
+`move` : entrée / sortie / inventaire ; `setDependencies`, image, `movements`), `api.purchases` (`create` avec `low_stock`,
+lignes, `order`, `cancel`, `receive`, `pdf`). Bordereaux : `api.quotes.releaseDeliveryNote` / `restockDeliveryNote`.

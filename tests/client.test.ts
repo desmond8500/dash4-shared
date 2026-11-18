@@ -282,6 +282,25 @@ describe('client API', () => {
     expect(JSON.parse(fetch.mock.calls[1]?.[1]?.body)).toEqual({ template_id: 12 })
   })
 
+  it('cherche un article par code-barres, le déplace et réceptionne un achat', async () => {
+    const fetch = vi
+      .fn()
+      .mockImplementationOnce(async () => jsonResponse(200, { data: [], meta: { server_time: 'x' } }))
+      .mockImplementation(async () => jsonResponse(200, { data: { id: 5 } }))
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+
+    expect(await api.articles.findByBarcode('6941264012345')).toBeNull()
+    await api.articles.move(5, { type: 'out', quantity: 2, project_id: 3 })
+    await api.articles.list({ low: true, active: 'all' })
+    await api.purchases.receive(9, { lines: [{ id: 1, quantity: 4 }] })
+
+    expect(fetch.mock.calls[0]?.[0]).toContain('barcode=6941264012345')
+    expect(fetch.mock.calls[1]?.[0]).toBe('https://api.test/api/v1/articles/5/movements')
+    expect(fetch.mock.calls[2]?.[0]).toContain('low=1')
+    expect(fetch.mock.calls[2]?.[0]).toContain('active=all')
+    expect(JSON.parse(fetch.mock.calls[3]?.[1]?.body)).toEqual({ lines: [{ id: 1, quantity: 4 }] })
+  })
+
   it('crée, émet et encaisse une facture', async () => {
     const fetch = vi.fn().mockImplementation(async () => jsonResponse(200, { data: { id: 8 } }))
     const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
