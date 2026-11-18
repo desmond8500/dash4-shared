@@ -1,4 +1,9 @@
 import type {
+  Quote,
+  QuoteFilters,
+  QuoteLinePayload,
+  QuotePayload,
+  QuoteStatus,
   AppSettings,
   AttachableType,
   BankAccount,
@@ -252,12 +257,21 @@ export function createApiClient(options: ApiClientOptions) {
       async remove(id: number): Promise<void> {
         await request('DELETE', `client-requests/${id}`)
       },
-      /** Transforme la demande en projet ; elle passe à « Traitée ». `client_id` exigé si la demande n'a pas de client. */
+      /**
+       * Transforme la demande en projet ou en devis ; elle passe à « Traitée ».
+       * `client_id` exigé si la demande n'a pas de client.
+       */
       async convert(
         id: number,
-        payload: { type: 'project'; name?: string; client_id?: number; manager_id?: number | null },
-      ): Promise<{ request: ClientRequest; project: Project }> {
-        return (await request<Wrapped<{ request: ClientRequest; project: Project }>>('POST', `client-requests/${id}/convert`, payload)).data
+        payload: { type: 'project' | 'quote'; name?: string; client_id?: number; manager_id?: number | null },
+      ): Promise<{ request: ClientRequest; project?: Project; quote?: Quote }> {
+        return (
+          await request<Wrapped<{ request: ClientRequest; project?: Project; quote?: Quote }>>(
+            'POST',
+            `client-requests/${id}/convert`,
+            payload,
+          )
+        ).data
       },
     },
 
@@ -336,6 +350,65 @@ export function createApiClient(options: ApiClientOptions) {
       },
       async remove(documentId: number): Promise<void> {
         await request('DELETE', `documents/${documentId}`)
+      },
+    },
+
+    quotes: {
+      list(filters: QuoteFilters = {}): Promise<SyncPaginated<Quote>> {
+        return request('GET', 'quotes', undefined, { ...filters })
+      },
+      /** Devis complet : sections et lignes, totaux. */
+      async get(id: number): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('GET', `quotes/${id}`)).data
+      },
+      async create(payload: QuotePayload): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('POST', 'quotes', payload)).data
+      },
+      async update(id: number, payload: Partial<Omit<QuotePayload, 'client_uuid'>>): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('PATCH', `quotes/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `quotes/${id}`)
+      },
+      async setStatus(id: number, status: QuoteStatus): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('POST', `quotes/${id}/status`, { status })).data
+      },
+      async duplicate(id: number): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('POST', `quotes/${id}/duplicate`)).data
+      },
+      /** PDF du devis (logo, banque, signature et cachet). */
+      pdf(id: number): Promise<Blob> {
+        return requestBlob(`quotes/${id}/pdf`)
+      },
+      /** Copie signée par le client : le devis passe à « Accepté ». */
+      async uploadSignedCopy(id: number, file: Blob, filename: string): Promise<Quote> {
+        const form = new FormData()
+        form.append('file', file, filename)
+        return (await request<Wrapped<Quote>>('POST', `quotes/${id}/signed-copy`, form)).data
+      },
+      async addSection(id: number, payload: { title: string; is_visible?: boolean }): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('POST', `quotes/${id}/sections`, payload)).data
+      },
+      async updateSection(sectionId: number, payload: { title?: string; is_visible?: boolean }): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('PATCH', `quote-sections/${sectionId}`, payload)).data
+      },
+      async removeSection(sectionId: number): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('DELETE', `quote-sections/${sectionId}`)).data
+      },
+      async orderSections(id: number, ids: number[]): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('POST', `quotes/${id}/sections/order`, { ids })).data
+      },
+      async addLine(sectionId: number, payload: QuoteLinePayload): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('POST', `quote-sections/${sectionId}/lines`, payload)).data
+      },
+      async updateLine(lineId: number, payload: Partial<QuoteLinePayload>): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('PATCH', `quote-lines/${lineId}`, payload)).data
+      },
+      async removeLine(lineId: number): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('DELETE', `quote-lines/${lineId}`)).data
+      },
+      async orderLines(sectionId: number, ids: number[]): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('POST', `quote-sections/${sectionId}/lines/order`, { ids })).data
       },
     },
 

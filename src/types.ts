@@ -402,7 +402,7 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
 export const ACTIVE_PROJECT_STATUSES: ProjectStatus[] = ['planned', 'in_progress', 'on_hold']
 
 /** Fiches qui acceptent notes, liens et documents (segment de l'adresse de l'API). */
-export type AttachableType = 'clients' | 'projects'
+export type AttachableType = 'clients' | 'projects' | 'quotes'
 
 export interface Note {
   id: number
@@ -595,4 +595,157 @@ export interface AppSettings {
 
 export type SettingsPayload = Partial<Omit<AppSettings, 'next_numbers' | 'numbering'>> & {
   numbering?: Partial<Record<DocumentType, string>>
+}
+
+// ---------------------------------------------------------------------------
+// Devis
+// ---------------------------------------------------------------------------
+
+export type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'refused' | 'cancelled'
+
+export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
+  draft: 'Brouillon',
+  sent: 'Envoyé',
+  accepted: 'Accepté',
+  refused: 'Refusé',
+  cancelled: 'Annulé',
+}
+
+/** Changements de statut permis (même règle que l'API). Accepter / refuser : `quotes.validate`. */
+export const QUOTE_TRANSITIONS: Record<QuoteStatus, QuoteStatus[]> = {
+  draft: ['sent', 'accepted', 'cancelled'],
+  sent: ['draft', 'accepted', 'refused', 'cancelled'],
+  accepted: ['sent', 'cancelled'],
+  refused: ['draft'],
+  cancelled: ['draft'],
+}
+
+/** Statuts où le devis se modifie encore ; sinon il se duplique. */
+export const EDITABLE_QUOTE_STATUSES: QuoteStatus[] = ['draft', 'sent']
+
+export type QuoteLineCategory = 'central' | 'device' | 'cable' | 'accessory' | 'service' | 'other'
+
+export const QUOTE_LINE_CATEGORY_LABELS: Record<QuoteLineCategory, string> = {
+  central: 'Centrale',
+  device: 'Organe',
+  cable: 'Câble',
+  accessory: 'Accessoires',
+  service: "Main-d'œuvre / forfait",
+  other: 'Autre',
+}
+
+export interface QuoteLine {
+  id: number
+  quote_section_id: number
+  position: number
+  article_id: number | null
+  designation: string
+  reference: string | null
+  comment: string | null
+  category: Labelled<QuoteLineCategory>
+  unit: string | null
+  quantity: number
+  /** Avec `prices.view`. */
+  unit_price?: number
+  line_total?: number
+  /** Avec `costs.view` : prix unitaire = coût × coefficient. */
+  unit_cost?: number
+  coefficient?: number
+}
+
+export interface QuoteSection {
+  id: number
+  title: string
+  position: number
+  /** Section masquée : ni imprimée ni comptée. */
+  is_visible: boolean
+  subtotal?: number
+  lines: QuoteLine[]
+}
+
+export interface Quote {
+  id: number
+  client_uuid: string | null
+  number: string
+  title: string
+  status: Labelled<QuoteStatus>
+  client_id: number
+  client?: { id: number; name: string } | null
+  project_id: number | null
+  project?: { id: number; name: string } | null
+  introduction: string | null
+  payment_terms: string | null
+  notes: string | null
+  issued_at: string
+  valid_until: string | null
+  tax_mode: Labelled<TaxMode>
+  vat_rate: number
+  brs_rate: number
+  discount_rate: number
+  bank_account_id: number | null
+  bank_account?: { id: number; bank_name: string; label: string | null } | null
+  show_signature: boolean
+  is_favorite: boolean
+  /** Montants : `prices.view`. */
+  subtotal?: number
+  discount_amount?: number
+  net_amount?: number
+  tax_amount?: number
+  total?: number
+  /** Coûts et marge : `costs.view`. */
+  cost_total?: number
+  margin?: number
+  margin_rate?: number | null
+  /** Sur la fiche. */
+  sections?: QuoteSection[]
+  sent_at: string | null
+  decided_at: string | null
+  signed_at: string | null
+  signed_document_id: number | null
+  creator?: UserRef | null
+  can: { update: boolean; validate: boolean; delete: boolean; export: boolean; edit_prices: boolean }
+  created_at: string | null
+  updated_at: string | null
+  deleted_at: string | null
+}
+
+export interface QuotePayload {
+  client_uuid?: string
+  client_id: number
+  project_id?: number | null
+  title: string
+  introduction?: string | null
+  payment_terms?: string | null
+  notes?: string | null
+  issued_at?: string
+  valid_until?: string | null
+  tax_mode?: TaxMode
+  discount_rate?: number
+  bank_account_id?: number | null
+  show_signature?: boolean
+  is_favorite?: boolean
+}
+
+export interface QuoteLinePayload {
+  designation: string
+  reference?: string | null
+  comment?: string | null
+  category?: QuoteLineCategory
+  unit?: string | null
+  quantity?: number
+  /** Demandent `costs.view`. */
+  unit_cost?: number
+  coefficient?: number
+  position?: number
+  /** Déplacer la ligne dans une autre section du même devis. */
+  quote_section_id?: number
+}
+
+export interface QuoteFilters extends SyncFilters {
+  search?: string
+  /** Plusieurs statuts séparés par des virgules. */
+  status?: string
+  client_id?: number
+  project_id?: number
+  year?: number
 }

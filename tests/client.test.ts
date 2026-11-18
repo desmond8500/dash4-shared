@@ -234,4 +234,23 @@ describe('client API', () => {
       'https://api.test/api/v1/settings/numbering-preview?type=quote&format=DEV-%7BYYYY%7D-%7B%23%23%23%23%7D',
     )
   })
+
+  it('modifie les lignes d\'un devis et télécharge son PDF', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(200, { data: { id: 3, total: 472000 } }))
+      .mockResolvedValueOnce(jsonResponse(200, { data: { id: 3, status: { value: 'sent' } } }))
+      .mockResolvedValueOnce(new Response('%PDF-1.7', { status: 200 }))
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+
+    const quote = await api.quotes.addLine(8, { designation: 'Caméra', quantity: 4, unit_cost: 50000, coefficient: 1.5 })
+    await api.quotes.setStatus(3, 'sent')
+    const pdf = await api.quotes.pdf(3)
+
+    expect(quote.total).toBe(472000)
+    expect(fetch.mock.calls[0]?.[0]).toBe('https://api.test/api/v1/quote-sections/8/lines')
+    expect(JSON.parse(fetch.mock.calls[1]?.[1]?.body)).toEqual({ status: 'sent' })
+    expect(fetch.mock.calls[2]?.[0]).toBe('https://api.test/api/v1/quotes/3/pdf')
+    expect(await pdf.text()).toBe('%PDF-1.7')
+  })
 })
