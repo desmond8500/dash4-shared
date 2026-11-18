@@ -504,3 +504,95 @@ export interface ProjectFilters extends SyncFilters {
   /** Synchro du mobile : `notes,links`. */
   include?: string
 }
+
+// ---------------------------------------------------------------------------
+// Entreprise, banque, paramètres
+// ---------------------------------------------------------------------------
+
+/** TVA ajoutée, BRS (retenue à la source, entreprises individuelles) déduite, ou sans taxe. */
+export type TaxMode = 'vat' | 'brs' | 'none'
+
+export const TAX_MODE_LABELS: Record<TaxMode, string> = {
+  vat: 'TVA',
+  brs: 'BRS (retenue à la source)',
+  none: 'Sans taxe',
+}
+
+export type DocumentType = 'quote' | 'invoice' | 'credit_note' | 'delivery_note' | 'purchase_order'
+
+export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
+  quote: 'Devis',
+  invoice: 'Factures',
+  credit_note: 'Avoirs',
+  delivery_note: 'Bons de livraison',
+  purchase_order: 'Bons de commande',
+}
+
+export type SignatureDocument = 'quote' | 'invoice' | 'delivery_note' | 'report' | 'acceptance'
+
+export const SIGNATURE_DOCUMENT_LABELS: Record<SignatureDocument, string> = {
+  quote: 'Devis',
+  invoice: 'Factures',
+  delivery_note: 'Bons de livraison',
+  report: "Rapports d'intervention",
+  acceptance: 'Procès-verbaux',
+}
+
+export interface Company {
+  name: string
+  legal_form: string | null
+  logo_url: string | null
+  address: string | null
+  city: string | null
+  country: string | null
+  phone: string | null
+  email: string | null
+  website: string | null
+  ninea: string | null
+  rccm: string | null
+  share_capital: string | null
+  legal_mentions: string | null
+  terms: string | null
+  /** Seulement pour `signature.manage`. */
+  signature?: {
+    has_signature: boolean
+    has_stamp: boolean
+    on: Record<SignatureDocument, boolean>
+  }
+  updated_at: string | null
+}
+
+export type CompanyPayload = Partial<Omit<Company, 'logo_url' | 'signature' | 'updated_at'>> & {
+  signature_on?: Partial<Record<SignatureDocument, boolean>>
+}
+
+export interface BankAccount {
+  id: number
+  label: string | null
+  bank_name: string
+  holder: string
+  account_number: string
+  iban: string | null
+  bic: string | null
+  is_default: boolean
+  updated_at: string | null
+}
+
+export type BankAccountPayload = Omit<BankAccount, 'id' | 'updated_at' | 'is_default'> & { is_default?: boolean }
+
+export type Currency = 'XOF' | 'EUR' | 'USD'
+
+export interface AppSettings {
+  currency: Currency
+  vat_rate: number
+  brs_rate: number
+  default_tax: TaxMode
+  /** Formats : {YYYY}, {YY}, {MM}, {####}. */
+  numbering: Record<DocumentType, string>
+  /** Prochain numéro de chaque type de document. */
+  next_numbers: Record<DocumentType, string>
+}
+
+export type SettingsPayload = Partial<Omit<AppSettings, 'next_numbers' | 'numbering'>> & {
+  numbering?: Partial<Record<DocumentType, string>>
+}

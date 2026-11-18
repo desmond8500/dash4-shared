@@ -216,4 +216,22 @@ describe('client API', () => {
     expect(result.project.id).toBe(2)
     expect(fetch.mock.calls[0]?.[0]).toBe('https://api.test/api/v1/client-requests/1/convert')
   })
+
+  it('lit l\'entreprise, la banque et les paramètres', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(200, { data: { name: 'Yonkou SARL' } }))
+      .mockResolvedValueOnce(jsonResponse(200, { data: [{ id: 1, bank_name: 'CBAO', is_default: true }] }))
+      .mockResolvedValueOnce(jsonResponse(200, { data: { currency: 'XOF', vat_rate: 18 } }))
+      .mockResolvedValueOnce(jsonResponse(200, { data: { next: 'DEV-2026-0001' } }))
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+
+    expect((await api.company.get()).name).toBe('Yonkou SARL')
+    expect((await api.bankAccounts.list())[0]?.bank_name).toBe('CBAO')
+    expect((await api.settings.get()).vat_rate).toBe(18)
+    expect(await api.settings.numberingPreview('quote', 'DEV-{YYYY}-{####}')).toBe('DEV-2026-0001')
+    expect(fetch.mock.calls[3]?.[0]).toBe(
+      'https://api.test/api/v1/settings/numbering-preview?type=quote&format=DEV-%7BYYYY%7D-%7B%23%23%23%23%7D',
+    )
+  })
 })

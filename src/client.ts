@@ -1,5 +1,12 @@
 import type {
+  AppSettings,
   AttachableType,
+  BankAccount,
+  BankAccountPayload,
+  Company,
+  CompanyPayload,
+  DocumentType,
+  SettingsPayload,
   Assignee,
   Document,
   Link,
@@ -329,6 +336,62 @@ export function createApiClient(options: ApiClientOptions) {
       },
       async remove(documentId: number): Promise<void> {
         await request('DELETE', `documents/${documentId}`)
+      },
+    },
+
+    company: {
+      async get(): Promise<Company> {
+        return (await request<Wrapped<Company>>('GET', 'company')).data
+      },
+      async update(payload: CompanyPayload): Promise<Company> {
+        return (await request<Wrapped<Company>>('PATCH', 'company', payload)).data
+      },
+      async uploadLogo(file: Blob, filename = 'logo'): Promise<Company> {
+        const form = new FormData()
+        form.append('logo', file, filename)
+        return (await request<Wrapped<Company>>('POST', 'company/logo', form)).data
+      },
+      async removeLogo(): Promise<Company> {
+        return (await request<Wrapped<Company>>('DELETE', 'company/logo')).data
+      },
+      /** Signature ou cachet (PNG privé, `signature.manage`). */
+      image(kind: 'signature' | 'stamp'): Promise<Blob> {
+        return requestBlob(`company/${kind}`)
+      },
+      async uploadImage(kind: 'signature' | 'stamp', file: Blob, filename = `${kind}.png`): Promise<Company> {
+        const form = new FormData()
+        form.append('image', file, filename)
+        return (await request<Wrapped<Company>>('POST', `company/${kind}`, form)).data
+      },
+      async removeImage(kind: 'signature' | 'stamp'): Promise<Company> {
+        return (await request<Wrapped<Company>>('DELETE', `company/${kind}`)).data
+      },
+    },
+
+    bankAccounts: {
+      async list(): Promise<BankAccount[]> {
+        return (await request<Wrapped<BankAccount[]>>('GET', 'bank-accounts')).data
+      },
+      async create(payload: BankAccountPayload): Promise<BankAccount> {
+        return (await request<Wrapped<BankAccount>>('POST', 'bank-accounts', payload)).data
+      },
+      async update(id: number, payload: Partial<BankAccountPayload>): Promise<BankAccount> {
+        return (await request<Wrapped<BankAccount>>('PATCH', `bank-accounts/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `bank-accounts/${id}`)
+      },
+    },
+
+    settings: {
+      async get(): Promise<AppSettings> {
+        return (await request<Wrapped<AppSettings>>('GET', 'settings')).data
+      },
+      async update(payload: SettingsPayload): Promise<AppSettings> {
+        return (await request<Wrapped<AppSettings>>('PATCH', 'settings', payload)).data
+      },
+      async numberingPreview(type: DocumentType, format?: string): Promise<string> {
+        return (await request<Wrapped<{ next: string }>>('GET', 'settings/numbering-preview', undefined, { type, format })).data.next
       },
     },
 
