@@ -270,7 +270,8 @@ describe('client API', () => {
   })
 
   it('envoie le devis par e-mail et insère un modèle', async () => {
-    const fetch = vi.fn().mockResolvedValue(jsonResponse(200, { data: { id: 3 } }))
+    // Une réponse neuve à chaque appel (le corps d'une réponse ne se lit qu'une fois)
+    const fetch = vi.fn().mockImplementation(async () => jsonResponse(200, { data: { id: 3 } }))
     const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
 
     await api.quotes.send(3, { to: ['client@example.sn'], subject: 'Devis', message: 'Bonjour', attach_proposal: true })
