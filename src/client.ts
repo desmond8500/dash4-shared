@@ -4,6 +4,17 @@ import type {
   DeliveryNotePayload,
   QuoteDepositPayload,
   QuoteEmailDraft,
+  AccountingFilters,
+  AccountingSummary,
+  Expense,
+  ExpenseCategory,
+  ExpenseFilters,
+  ExpensePayload,
+  ExpenseSpace,
+  ExpenseSummary,
+  LedgerEntry,
+  Transaction,
+  TransactionPayload,
   Article,
   ArticleFilters,
   ArticlePayload,
@@ -714,6 +725,107 @@ export function createApiClient(options: ApiClientOptions) {
       /** Bon de commande (`costs.view`). */
       pdf(id: number): Promise<Blob> {
         return requestBlob(`purchases/${id}/pdf`)
+      },
+    },
+
+    /** Dépenses : chacun les siennes (à valider), le comptable toutes (`accounting.*`). */
+    expenses: {
+      list(filters: ExpenseFilters = {}): Promise<SyncPaginated<Expense>> {
+        return request('GET', 'expenses', undefined, { ...filters })
+      },
+      async summary(): Promise<ExpenseSummary> {
+        return (await request<Wrapped<ExpenseSummary>>('GET', 'expenses/summary')).data
+      },
+      async get(id: number): Promise<Expense> {
+        return (await request<Wrapped<Expense>>('GET', `expenses/${id}`)).data
+      },
+      /** Avec `file` : justificatif (photo, PDF) envoyé en même temps. */
+      async create(payload: ExpensePayload & { label: string; amount: number; spent_at: string }, file?: Blob, filename?: string): Promise<Expense> {
+        return (await request<Wrapped<Expense>>('POST', 'expenses', file ? toForm(payload, file, filename) : payload)).data
+      },
+      async update(id: number, payload: ExpensePayload): Promise<Expense> {
+        return (await request<Wrapped<Expense>>('PATCH', `expenses/${id}`, payload)).data
+      },
+      async uploadReceipt(id: number, file: Blob, filename = 'justificatif'): Promise<Expense> {
+        return (await request<Wrapped<Expense>>('POST', `expenses/${id}/receipt`, toForm({}, file, filename))).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `expenses/${id}`)
+      },
+      async approve(id: number): Promise<Expense> {
+        return (await request<Wrapped<Expense>>('POST', `expenses/${id}/approve`)).data
+      },
+      async reject(id: number, reason: string): Promise<Expense> {
+        return (await request<Wrapped<Expense>>('POST', `expenses/${id}/reject`, { reason })).data
+      },
+      async reimburse(id: number): Promise<Expense> {
+        return (await request<Wrapped<Expense>>('POST', `expenses/${id}/reimburse`)).data
+      },
+    },
+
+    expenseCategories: {
+      async list(all = false): Promise<ExpenseCategory[]> {
+        return (await request<Wrapped<ExpenseCategory[]>>('GET', 'expense-categories', undefined, all ? { all: 1 } : undefined)).data
+      },
+      async create(payload: { name: string; color?: string | null }): Promise<ExpenseCategory> {
+        return (await request<Wrapped<ExpenseCategory>>('POST', 'expense-categories', payload)).data
+      },
+      async update(id: number, payload: { name?: string; color?: string | null; is_active?: boolean }): Promise<ExpenseCategory> {
+        return (await request<Wrapped<ExpenseCategory>>('PATCH', `expense-categories/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `expense-categories/${id}`)
+      },
+    },
+
+    /** Caisses : membres, versements, solde. */
+    expenseSpaces: {
+      async list(all = false): Promise<ExpenseSpace[]> {
+        return (await request<Wrapped<ExpenseSpace[]>>('GET', 'expense-spaces', undefined, all ? { all: 1 } : undefined)).data
+      },
+      async get(id: number): Promise<ExpenseSpace> {
+        return (await request<Wrapped<ExpenseSpace>>('GET', `expense-spaces/${id}`)).data
+      },
+      async create(payload: { name: string; description?: string | null; member_ids?: number[] }): Promise<ExpenseSpace> {
+        return (await request<Wrapped<ExpenseSpace>>('POST', 'expense-spaces', payload)).data
+      },
+      /** `member_ids` : remplacent les membres. */
+      async update(id: number, payload: { name?: string; description?: string | null; is_active?: boolean; member_ids?: number[] }): Promise<ExpenseSpace> {
+        return (await request<Wrapped<ExpenseSpace>>('PATCH', `expense-spaces/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `expense-spaces/${id}`)
+      },
+      async fund(id: number, payload: { amount: number; funded_at?: string; method?: string | null; note?: string | null }): Promise<ExpenseSpace> {
+        return (await request<Wrapped<ExpenseSpace>>('POST', `expense-spaces/${id}/fundings`, payload)).data
+      },
+      async removeFunding(fundingId: number): Promise<ExpenseSpace> {
+        return (await request<Wrapped<ExpenseSpace>>('DELETE', `expense-space-fundings/${fundingId}`)).data
+      },
+    },
+
+    transactions: {
+      list(filters: AccountingFilters & { direction?: 'in' | 'out'; page?: number; per_page?: number } = {}): Promise<Paginated<Transaction>> {
+        return request('GET', 'transactions', undefined, { ...filters })
+      },
+      async create(payload: TransactionPayload & { direction: 'in' | 'out'; label: string; amount: number; transacted_at: string }): Promise<Transaction> {
+        return (await request<Wrapped<Transaction>>('POST', 'transactions', payload)).data
+      },
+      async update(id: number, payload: TransactionPayload): Promise<Transaction> {
+        return (await request<Wrapped<Transaction>>('PATCH', `transactions/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `transactions/${id}`)
+      },
+    },
+
+    /** Bilan et journal (`accounting.view`) ; période par défaut : l'année en cours. */
+    accounting: {
+      async summary(filters: AccountingFilters = {}): Promise<AccountingSummary> {
+        return (await request<Wrapped<AccountingSummary>>('GET', 'accounting/summary', undefined, { ...filters })).data
+      },
+      ledger(filters: AccountingFilters & { direction?: 'in' | 'out'; source?: string; page?: number; per_page?: number } = {}): Promise<Paginated<LedgerEntry>> {
+        return request('GET', 'accounting/ledger', undefined, { ...filters })
       },
     },
 

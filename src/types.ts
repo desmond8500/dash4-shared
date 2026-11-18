@@ -402,7 +402,7 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
 export const ACTIVE_PROJECT_STATUSES: ProjectStatus[] = ['planned', 'in_progress', 'on_hold']
 
 /** Fiches qui acceptent notes, liens et documents (segment de l'adresse de l'API). */
-export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases'
+export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses'
 
 export interface Note {
   id: number
@@ -817,6 +817,8 @@ export interface QuoteExpense {
   amount: number
   spent_at: string | null
   is_paid: boolean
+  /** Une dépense saisie depuis le devis est validée d'office. */
+  status?: Labelled<ExpenseStatus>
   document: { id: number; name: string; download_path: string } | null
   creator: UserRef | null
 }
@@ -1397,4 +1399,190 @@ export interface PurchaseReceivePayload {
   note?: string | null
   /** Oui par défaut : le coût des articles prend le prix d'achat. */
   update_costs?: boolean
+}
+
+// ---------------------------------------------------------------------------
+// Comptabilité : dépenses, caisses, catégories, transactions, bilan
+// ---------------------------------------------------------------------------
+
+export type ExpenseStatus = 'submitted' | 'approved' | 'rejected' | 'reimbursed'
+
+export const EXPENSE_STATUS_LABELS: Record<ExpenseStatus, string> = {
+  submitted: 'À valider',
+  approved: 'Validée',
+  rejected: 'Refusée',
+  reimbursed: 'Remboursée',
+}
+
+export interface ExpenseCategory {
+  id: number
+  name: string
+  color: string | null
+  is_active: boolean
+  expenses_count: number
+}
+
+export interface Expense {
+  id: number
+  client_uuid: string | null
+  label: string
+  description: string | null
+  amount: number
+  spent_at: string | null
+  status: Labelled<ExpenseStatus>
+  expense_category_id: number | null
+  category?: { id: number; name: string; color: string | null } | null
+  expense_space_id: number | null
+  space?: { id: number; name: string } | null
+  project_id: number | null
+  project?: { id: number; name: string } | null
+  quote_id: number | null
+  quote?: { id: number; number: string } | null
+  provider_id: number | null
+  provider?: { id: number; name: string } | null
+  payment_method: Labelled<PaymentMethod> | null
+  /** Payée avec son propre argent : à lui rembourser. */
+  advanced: boolean
+  is_paid: boolean
+  to_reimburse: boolean
+  rejection_reason: string | null
+  decided_at: string | null
+  decider?: UserRef | null
+  reimbursed_at: string | null
+  document?: { id: number; name: string; mime_type: string | null; download_path: string } | null
+  creator?: UserRef | null
+  created_by: number | null
+  /** `decide` : valider, refuser, rembourser. */
+  can: { update: boolean; delete: boolean; decide: boolean }
+  created_at: string | null
+  updated_at: string | null
+  deleted_at: string | null
+}
+
+export interface ExpenseFilters extends SyncFilters {
+  status?: string
+  mine?: boolean
+  to_reimburse?: boolean
+  expense_space_id?: number
+  project_id?: number
+  quote_id?: number
+  expense_category_id?: number
+  created_by?: number
+  from?: string
+  to?: string
+  search?: string
+}
+
+export interface ExpensePayload {
+  client_uuid?: string
+  label?: string
+  description?: string | null
+  amount?: number
+  spent_at?: string
+  expense_category_id?: number | null
+  expense_space_id?: number | null
+  project_id?: number | null
+  quote_id?: number | null
+  provider_id?: number | null
+  payment_method?: PaymentMethod | null
+  advanced?: boolean
+  is_paid?: boolean
+}
+
+export interface ExpenseSummary {
+  to_approve_count: number
+  to_approve_amount: number
+  to_reimburse_count: number
+  to_reimburse_amount: number
+  this_month: number
+}
+
+export interface ExpenseSpace {
+  id: number
+  name: string
+  description: string | null
+  is_active: boolean
+  /** Versé dans la caisse. */
+  funded: number
+  /** Dépenses payées avec la caisse (non avancées, non refusées). */
+  spent: number
+  /** Dont à valider. */
+  pending: number
+  balance: number
+  members: UserRef[]
+  /** Sur la fiche. */
+  fundings?: Array<{ id: number; amount: number; funded_at: string | null; method: Labelled<PaymentMethod> | null; note: string | null; creator: UserRef | null }>
+  can: { update: boolean; fund: boolean; delete: boolean }
+}
+
+export interface Transaction {
+  id: number
+  client_uuid: string | null
+  direction: 'in' | 'out'
+  label: string
+  amount: number
+  transacted_at: string | null
+  expense_category_id: number | null
+  category: { id: number; name: string } | null
+  project_id: number | null
+  project: { id: number; name: string } | null
+  client_id: number | null
+  client: { id: number; name: string } | null
+  provider_id: number | null
+  provider: { id: number; name: string } | null
+  method: Labelled<PaymentMethod> | null
+  reference: string | null
+  note: string | null
+  creator: UserRef | null
+}
+
+export interface TransactionPayload {
+  client_uuid?: string
+  direction?: 'in' | 'out'
+  label?: string
+  amount?: number
+  transacted_at?: string
+  expense_category_id?: number | null
+  project_id?: number | null
+  client_id?: number | null
+  provider_id?: number | null
+  method?: PaymentMethod | null
+  reference?: string | null
+  note?: string | null
+}
+
+export type LedgerSource = 'invoice' | 'expense' | 'purchase' | 'transaction'
+
+export const LEDGER_SOURCE_LABELS: Record<LedgerSource, string> = {
+  invoice: 'Factures encaissées',
+  expense: 'Dépenses',
+  purchase: 'Achats reçus',
+  transaction: 'Transactions',
+}
+
+export interface LedgerEntry {
+  date: string
+  direction: 'in' | 'out'
+  amount: number
+  label: string
+  source: { type: LedgerSource; id: number; number: string | null }
+  category: string | null
+  project: { id: number; name: string } | null
+}
+
+export interface AccountingSummary {
+  from: string
+  to: string
+  in: number
+  out: number
+  net: number
+  by_month: Array<{ month: string; in: number; out: number }>
+  by_category: Array<{ direction: 'in' | 'out'; category: string; amount: number }>
+  by_source: Array<{ source: LedgerSource; in: number; out: number }>
+}
+
+export interface AccountingFilters {
+  from?: string
+  to?: string
+  project_id?: number
 }

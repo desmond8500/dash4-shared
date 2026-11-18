@@ -57,3 +57,9 @@ Listes `INVOICE_SCOPES` et `PAYMENT_METHODS` pour les formulaires.
 `api.brands`, `api.providers`, `api.articles` (`list` avec `low`, `barcode`, `category`… ; `findByBarcode` pour le scan ;
 `move` : entrée / sortie / inventaire ; `setDependencies`, image, `movements`), `api.purchases` (`create` avec `low_stock`,
 lignes, `order`, `cancel`, `receive`, `pdf`). Bordereaux : `api.quotes.releaseDeliveryNote` / `restockDeliveryNote`.
+
+### Comptabilité (0.12.0)
+
+`api.expenses` (`create` avec justificatif facultatif, `approve`, `reject`, `reimburse`, `uploadReceipt`, `summary`),
+`api.expenseCategories`, `api.expenseSpaces` (caisses : membres, `fund`, solde), `api.transactions`,
+`api.accounting.summary` / `ledger` (bilan : factures encaissées, dépenses validées, achats reçus, transactions).

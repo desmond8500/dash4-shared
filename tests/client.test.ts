@@ -301,6 +301,21 @@ describe('client API', () => {
     expect(JSON.parse(fetch.mock.calls[3]?.[1]?.body)).toEqual({ lines: [{ id: 1, quantity: 4 }] })
   })
 
+  it('envoie une dépense avec son justificatif en multipart, et le refus avec son motif', async () => {
+    const fetch = vi.fn().mockImplementation(async () => jsonResponse(200, { data: { id: 2 } }))
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+
+    await api.expenses.create({ label: 'Taxi', amount: 5000, spent_at: '2026-11-18', advanced: true }, new Blob(['x']), 'recu.jpg')
+    await api.expenses.reject(2, 'Doublon')
+    await api.accounting.summary({ from: '2026-01-01', project_id: 4 })
+
+    const form = fetch.mock.calls[0]?.[1]?.body as FormData
+    expect(form.get('advanced')).toBe('1')
+    expect(form.get('file')).toBeInstanceOf(Blob)
+    expect(JSON.parse(fetch.mock.calls[1]?.[1]?.body)).toEqual({ reason: 'Doublon' })
+    expect(fetch.mock.calls[2]?.[0]).toBe('https://api.test/api/v1/accounting/summary?from=2026-01-01&project_id=4')
+  })
+
   it('crée, émet et encaisse une facture', async () => {
     const fetch = vi.fn().mockImplementation(async () => jsonResponse(200, { data: { id: 8 } }))
     const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
