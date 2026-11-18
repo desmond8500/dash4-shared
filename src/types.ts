@@ -383,3 +383,124 @@ export interface NotificationPage {
   data: AppNotification[]
   meta: { current_page: number; last_page: number; per_page: number; total: number; unread_count: number }
 }
+
+// ---------------------------------------------------------------------------
+// Projets, notes, liens et documents
+// ---------------------------------------------------------------------------
+
+export type ProjectStatus = 'planned' | 'in_progress' | 'on_hold' | 'completed' | 'cancelled'
+
+export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
+  planned: 'À venir',
+  in_progress: 'En cours',
+  on_hold: 'En pause',
+  completed: 'Terminé',
+  cancelled: 'Annulé',
+}
+
+/** Projets encore actifs (liste par défaut). */
+export const ACTIVE_PROJECT_STATUSES: ProjectStatus[] = ['planned', 'in_progress', 'on_hold']
+
+/** Fiches qui acceptent notes, liens et documents (segment de l'adresse de l'API). */
+export type AttachableType = 'clients' | 'projects'
+
+export interface Note {
+  id: number
+  client_uuid: string | null
+  body: string
+  is_pinned: boolean
+  creator?: UserRef | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface NotePayload {
+  client_uuid?: string
+  body: string
+  is_pinned?: boolean
+}
+
+export interface Link {
+  id: number
+  client_uuid: string | null
+  label: string | null
+  url: string
+  creator?: UserRef | null
+  created_at: string | null
+}
+
+export interface LinkPayload {
+  client_uuid?: string
+  label?: string | null
+  url: string
+}
+
+export interface Document {
+  id: number
+  name: string
+  mime_type: string | null
+  size: number
+  /** Chemin à passer à `api.documents.download` (fichier privé). */
+  download_path: string
+  creator?: UserRef | null
+  created_at: string | null
+}
+
+export interface Project {
+  id: number
+  client_uuid: string | null
+  name: string
+  description: string | null
+  status: Labelled<ProjectStatus>
+  client_id: number | null
+  client?: { id: number; name: string } | null
+  manager_id: number | null
+  manager?: UserRef | null
+  start_date: string | null
+  end_date: string | null
+  address: string | null
+  latitude: number | null
+  longitude: number | null
+  logo_url: string | null
+  is_favorite: boolean
+  notes_count?: number
+  links_count?: number
+  documents_count?: number
+  /** Sur la fiche, ou dans la liste avec `include=notes,links`. */
+  notes?: Note[]
+  links?: Link[]
+  documents?: Document[]
+  /** Le compte connecté peut modifier ce projet (droits et « ses projets »). */
+  can_update: boolean
+  created_at: string | null
+  updated_at: string | null
+  deleted_at: string | null
+}
+
+export interface ProjectPayload {
+  client_uuid?: string
+  name: string
+  client_id: number
+  description?: string | null
+  status?: ProjectStatus
+  manager_id?: number | null
+  start_date?: string | null
+  end_date?: string | null
+  address?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  is_favorite?: boolean
+}
+
+export interface ProjectFilters extends SyncFilters {
+  search?: string
+  /** Plusieurs statuts séparés par des virgules. */
+  status?: string
+  /** À venir, en cours, en pause. */
+  active?: boolean
+  client_id?: number
+  manager?: 'me'
+  favorite?: boolean
+  /** Synchro du mobile : `notes,links`. */
+  include?: string
+}

@@ -1,5 +1,14 @@
 import type {
+  AttachableType,
   Assignee,
+  Document,
+  Link,
+  LinkPayload,
+  Note,
+  NotePayload,
+  Project,
+  ProjectFilters,
+  ProjectPayload,
   AppNotification,
   Client,
   ClientRequest,
@@ -76,6 +85,18 @@ export function createApiClient(options: ApiClientOptions) {
   const doFetch = options.fetch ?? globalThis.fetch.bind(globalThis)
 
   async function request<T>(method: string, path: string, body?: unknown, query?: Query): Promise<T> {
+    const response = await send(method, path, body, query)
+    const text = await response.text()
+    return (text ? safeJson(text) : null) as T
+  }
+
+  /** Téléchargement d'un fichier privé (document) avec le jeton de connexion. */
+  async function requestBlob(path: string): Promise<Blob> {
+    const response = await send('GET', path)
+    return response.blob()
+  }
+
+  async function send(method: string, path: string, body?: unknown, query?: Query): Promise<Response> {
     const token = await options.storage.get()
     const headers: Record<string, string> = { Accept: 'application/json' }
     // Envoi de fichier : le navigateur fixe lui-même le Content-Type multipart
@@ -94,10 +115,9 @@ export function createApiClient(options: ApiClientOptions) {
       throw new ApiError(0, 'Impossible de joindre le serveur. Vérifiez votre connexion.')
     }
 
-    const text = await response.text()
-    const data = text ? safeJson(text) : null
-
     if (!response.ok) {
+      const text = await response.text()
+      const data = text ? safeJson(text) : null
       const message =
         (data && typeof data === 'object' && 'message' in data && typeof data.message === 'string'
           ? data.message
@@ -113,7 +133,7 @@ export function createApiClient(options: ApiClientOptions) {
       throw new ApiError(response.status, message, errors)
     }
 
-    return data as T
+    return response
   }
 
   return {
@@ -224,6 +244,91 @@ export function createApiClient(options: ApiClientOptions) {
       },
       async remove(id: number): Promise<void> {
         await request('DELETE', `client-requests/${id}`)
+      },
+      /** Transforme la demande en projet ; elle passe à « Traitée ». `client_id` exigé si la demande n'a pas de client. */
+      async convert(
+        id: number,
+        payload: { type: 'project'; name?: string; client_id?: number; manager_id?: number | null },
+      ): Promise<{ request: ClientRequest; project: Project }> {
+        return (await request<Wrapped<{ request: ClientRequest; project: Project }>>('POST', `client-requests/${id}/convert`, payload)).data
+      },
+    },
+
+    projects: {
+      list(filters: ProjectFilters = {}): Promise<SyncPaginated<Project>> {
+        return request('GET', 'projects', undefined, { ...filters })
+      },
+      /** Fiche complète : notes, liens et documents. */
+      async get(id: number): Promise<Project> {
+        return (await request<Wrapped<Project>>('GET', `projects/${id}`)).data
+      },
+      async create(payload: ProjectPayload): Promise<Project> {
+        return (await request<Wrapped<Project>>('POST', 'projects', payload)).data
+      },
+      async update(id: number, payload: Partial<Omit<ProjectPayload, 'client_uuid'>>): Promise<Project> {
+        return (await request<Wrapped<Project>>('PATCH', `projects/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `projects/${id}`)
+      },
+      async uploadLogo(id: number, file: Blob, filename = 'logo'): Promise<Project> {
+        const form = new FormData()
+        form.append('logo', file, filename)
+        return (await request<Wrapped<Project>>('POST', `projects/${id}/logo`, form)).data
+      },
+      async removeLogo(id: number): Promise<Project> {
+        return (await request<Wrapped<Project>>('DELETE', `projects/${id}/logo`)).data
+      },
+    },
+
+    /** Notes de toute fiche (`clients`, `projects`). */
+    notes: {
+      async list(type: AttachableType, id: number): Promise<Note[]> {
+        return (await request<Wrapped<Note[]>>('GET', `${type}/${id}/notes`)).data
+      },
+      async create(type: AttachableType, id: number, payload: NotePayload): Promise<Note> {
+        return (await request<Wrapped<Note>>('POST', `${type}/${id}/notes`, payload)).data
+      },
+      async update(noteId: number, payload: Partial<Omit<NotePayload, 'client_uuid'>>): Promise<Note> {
+        return (await request<Wrapped<Note>>('PATCH', `notes/${noteId}`, payload)).data
+      },
+      async remove(noteId: number): Promise<void> {
+        await request('DELETE', `notes/${noteId}`)
+      },
+    },
+
+    links: {
+      async list(type: AttachableType, id: number): Promise<Link[]> {
+        return (await request<Wrapped<Link[]>>('GET', `${type}/${id}/links`)).data
+      },
+      async create(type: AttachableType, id: number, payload: LinkPayload): Promise<Link> {
+        return (await request<Wrapped<Link>>('POST', `${type}/${id}/links`, payload)).data
+      },
+      async update(linkId: number, payload: Partial<Omit<LinkPayload, 'client_uuid'>>): Promise<Link> {
+        return (await request<Wrapped<Link>>('PATCH', `links/${linkId}`, payload)).data
+      },
+      async remove(linkId: number): Promise<void> {
+        await request('DELETE', `links/${linkId}`)
+      },
+    },
+
+    documents: {
+      async list(type: AttachableType, id: number): Promise<Document[]> {
+        return (await request<Wrapped<Document[]>>('GET', `${type}/${id}/documents`)).data
+      },
+      /** 20 Mo au plus ; pas d'exécutable, de HTML ni de SVG. */
+      async upload(type: AttachableType, id: number, file: Blob, filename: string, name?: string): Promise<Document> {
+        const form = new FormData()
+        form.append('file', file, filename)
+        if (name) form.append('name', name)
+        return (await request<Wrapped<Document>>('POST', `${type}/${id}/documents`, form)).data
+      },
+      /** Contenu du fichier (privé), à ouvrir ou enregistrer côté appli. */
+      download(document: Pick<Document, 'download_path'>): Promise<Blob> {
+        return requestBlob(document.download_path)
+      },
+      async remove(documentId: number): Promise<void> {
+        await request('DELETE', `documents/${documentId}`)
       },
     },
 

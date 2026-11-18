@@ -169,4 +169,51 @@ describe('client API', () => {
     expect(fetch.mock.calls[1]?.[0]).toBe('https://api.test/api/v1/notifications/abc-1/read')
     expect(fetch.mock.calls[1]?.[1]?.method).toBe('POST')
   })
+
+  it('gère les projets et leurs notes', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(200, { data: [], meta: { server_time: 'T' } }))
+      .mockResolvedValueOnce(jsonResponse(201, { data: { id: 4, body: 'Code portail' } }))
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+
+    await api.projects.list({ active: true, include: 'notes,links' })
+    const note = await api.notes.create('projects', 9, { body: 'Code portail' })
+
+    expect(fetch.mock.calls[0]?.[0]).toBe('https://api.test/api/v1/projects?active=1&include=notes%2Clinks')
+    expect(fetch.mock.calls[1]?.[0]).toBe('https://api.test/api/v1/projects/9/notes')
+    expect(note.id).toBe(4)
+  })
+
+  it('télécharge un document privé avec le jeton', async () => {
+    const fetch = vi.fn().mockResolvedValue(new Response('PDF', { status: 200, headers: { 'Content-Type': 'application/pdf' } }))
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+
+    const blob = await api.documents.download({ download_path: 'documents/5/download' })
+
+    expect(await blob.text()).toBe('PDF')
+    const [url, init] = fetch.mock.calls[0] ?? []
+    expect(url).toBe('https://api.test/api/v1/documents/5/download')
+    expect(init.headers.Authorization).toBe('Bearer t')
+  })
+
+  it('signale un document refusé avec le message de l\'API', async () => {
+    const fetch = vi.fn().mockResolvedValue(jsonResponse(403, { message: "Vous n'avez pas le droit de faire cette action." }))
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+
+    await expect(api.documents.download({ download_path: 'documents/5/download' })).rejects.toMatchObject({
+      status: 403,
+      message: "Vous n'avez pas le droit de faire cette action.",
+    })
+  })
+
+  it('transforme une demande en projet', async () => {
+    const fetch = vi.fn().mockResolvedValue(jsonResponse(201, { data: { request: { id: 1 }, project: { id: 2 } } }))
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+
+    const result = await api.clientRequests.convert(1, { type: 'project', client_id: 3 })
+
+    expect(result.project.id).toBe(2)
+    expect(fetch.mock.calls[0]?.[0]).toBe('https://api.test/api/v1/client-requests/1/convert')
+  })
 })
