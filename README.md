@@ -15,7 +15,7 @@ const { user } = await api.auth.login({ email, password, device_name: 'Web' })
 if (can(user, 'users.view')) { /* … */ }
 ```
 
-Modules disponibles : `auth`, `users`, `roles`, `clients`, `contacts`, `clientRequests` (+ `summary`), `assignees`, `notifications`, `projects` (+ logo), `notes`, `links`, `documents` (`upload`, `download`), `company` (+ signature, cachet), `bankAccounts`, `settings`, `quotes` (sections, lignes, statut, duplication, PDF, copie signée) (`list`, `get`, `create`, `update`, `remove`) ; logo d'un client : `clients.uploadLogo(id, fichier)` et `clients.removeLogo(id)`.
+Modules disponibles : `auth`, `users`, `roles`, `clients`, `contacts`, `clientRequests` (+ `summary`), `assignees`, `notifications`, `projects` (+ logo), `notes`, `links`, `documents` (`upload`, `download`), `company` (+ signature, cachet), `bankAccounts`, `settings`, `quotes` (sections, lignes, statut, duplication, PDF, copie signée, proposition technique, acomptes, dépenses, bordereaux, envoi par e-mail), `quoteTemplates` (systèmes et modèles) (`list`, `get`, `create`, `update`, `remove`) ; logo d'un client : `clients.uploadLogo(id, fichier)` et `clients.removeLogo(id)`.
 
 Montants : `computeTotals(ht, 'vat' | 'brs' | 'none', settings)` (TVA ajoutée, BRS déduite), `formatMoney(1250000)` → « 1 250 000 F CFA », `formatDocumentNumber('DEV-{YYYY}-{####}', 1)`.
 

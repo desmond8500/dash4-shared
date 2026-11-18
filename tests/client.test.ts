@@ -253,4 +253,31 @@ describe('client API', () => {
     expect(fetch.mock.calls[2]?.[0]).toBe('https://api.test/api/v1/quotes/3/pdf')
     expect(await pdf.text()).toBe('%PDF-1.7')
   })
+
+  it('ajoute une dépense avec justificatif en multipart', async () => {
+    const fetch = vi.fn().mockResolvedValue(jsonResponse(200, { data: { id: 3, expenses_total: 95000 } }))
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+
+    await api.quotes.addExpense(3, { label: 'Achat caméras', amount: 95000, is_paid: true }, new Blob(['pdf']), 'facture.pdf')
+
+    const [url, init] = fetch.mock.calls[0] ?? []
+    expect(url).toBe('https://api.test/api/v1/quotes/3/expenses')
+    const form = init.body as FormData
+    expect(form.get('label')).toBe('Achat caméras')
+    expect(form.get('amount')).toBe('95000')
+    expect(form.get('is_paid')).toBe('1')
+    expect(form.get('file')).toBeInstanceOf(Blob)
+  })
+
+  it('envoie le devis par e-mail et insère un modèle', async () => {
+    const fetch = vi.fn().mockResolvedValue(jsonResponse(200, { data: { id: 3 } }))
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+
+    await api.quotes.send(3, { to: ['client@example.sn'], subject: 'Devis', message: 'Bonjour', attach_proposal: true })
+    await api.quotes.insertTemplate(3, 12)
+
+    expect(fetch.mock.calls[0]?.[0]).toBe('https://api.test/api/v1/quotes/3/send')
+    expect(JSON.parse(fetch.mock.calls[0]?.[1]?.body).attach_proposal).toBe(true)
+    expect(JSON.parse(fetch.mock.calls[1]?.[1]?.body)).toEqual({ template_id: 12 })
+  })
 })

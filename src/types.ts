@@ -659,6 +659,8 @@ export interface QuoteSection {
   position: number
   /** Section masquée : ni imprimée ni comptée. */
   is_visible: boolean
+  /** Texte de la proposition technique pour cette section. */
+  proposal: string | null
   subtotal?: number
   lines: QuoteLine[]
 }
@@ -698,6 +700,18 @@ export interface Quote {
   margin_rate?: number | null
   /** Sur la fiche. */
   sections?: QuoteSection[]
+  proposal_options: ProposalOptions
+  /** Acomptes : `prices.view`, sur la fiche. */
+  deposits?: QuoteDeposit[]
+  deposits_total?: number
+  deposits_paid?: number
+  remaining_amount?: number
+  /** Dépenses réelles et marge réelle : `costs.view`, sur la fiche. */
+  expenses?: QuoteExpense[]
+  expenses_total?: number
+  real_margin?: number
+  delivery_notes?: DeliveryNote[]
+  emails?: QuoteEmailRecord[]
   sent_at: string | null
   decided_at: string | null
   signed_at: string | null
@@ -724,6 +738,7 @@ export interface QuotePayload {
   bank_account_id?: number | null
   show_signature?: boolean
   is_favorite?: boolean
+  proposal_options?: Partial<ProposalOptions>
 }
 
 export interface QuoteLinePayload {
@@ -748,4 +763,180 @@ export interface QuoteFilters extends SyncFilters {
   client_id?: number
   project_id?: number
   year?: number
+}
+
+// ---------------------------------------------------------------------------
+// Devis, étape 2 : modèles, proposition technique, acomptes, dépenses, bordereaux, e-mails
+// ---------------------------------------------------------------------------
+
+export interface ProposalOptions {
+  show_logo: boolean
+  show_client: boolean
+  /** Nom affiché à la place du client (proposition anonyme), ou null. */
+  client_label: string | null
+  show_project: boolean
+  show_introduction: boolean
+  show_lines: boolean
+  show_prices: boolean
+  show_footer: boolean
+}
+
+export interface QuoteDeposit {
+  id: number
+  label: string
+  description: string | null
+  amount: number
+  due_date: string | null
+  is_paid: boolean
+  paid_at: string | null
+  show_on_pdf: boolean
+}
+
+export interface QuoteDepositPayload {
+  label?: string | null
+  description?: string | null
+  /** Montant en F CFA, ou `percent` du total du devis. */
+  amount?: number
+  percent?: number
+  due_date?: string | null
+  is_paid?: boolean
+  paid_at?: string | null
+  show_on_pdf?: boolean
+}
+
+export interface QuoteExpense {
+  id: number
+  label: string
+  description: string | null
+  amount: number
+  spent_at: string | null
+  is_paid: boolean
+  document: { id: number; name: string; download_path: string } | null
+  creator: UserRef | null
+}
+
+export interface QuoteExpensePayload {
+  label: string
+  description?: string | null
+  amount: number
+  spent_at?: string
+  is_paid?: boolean
+}
+
+export type DeliveryNoteType = 'delivery' | 'works'
+
+export const DELIVERY_NOTE_TYPE_LABELS: Record<DeliveryNoteType, string> = {
+  delivery: 'Bordereau de livraison',
+  works: 'Bordereau de travaux',
+}
+
+export interface DeliveryNoteLine {
+  id?: number
+  designation: string
+  reference: string | null
+  unit: string | null
+  quantity: number
+}
+
+export interface DeliveryNote {
+  id: number
+  number: string
+  type: Labelled<DeliveryNoteType>
+  title: string
+  delivered_at: string
+  done: string | null
+  todo: string | null
+  show_logo: boolean
+  lines: DeliveryNoteLine[]
+}
+
+export interface DeliveryNotePayload {
+  type?: DeliveryNoteType
+  title?: string
+  delivered_at?: string
+  done?: string | null
+  todo?: string | null
+  show_logo?: boolean
+  /** Absent à la création : équipements du devis (centrale, organes, câble). */
+  lines?: Array<Omit<DeliveryNoteLine, 'id'>>
+}
+
+export interface QuoteEmailRecord {
+  id: number
+  to: string[]
+  cc: string[]
+  subject: string
+  attachments: string[]
+  sent_at: string | null
+  sender: UserRef | null
+}
+
+export interface QuoteEmailDraft {
+  suggestions: Array<{ email: string; name: string; label: string | null }>
+  subject: string
+  message: string
+}
+
+export interface QuoteEmailPayload {
+  to: string[]
+  cc?: string[]
+  subject: string
+  message: string
+  attach_proposal?: boolean
+}
+
+export interface QuoteTemplateSummary {
+  id: number
+  quote_system_id: number | null
+  name: string
+  description: string | null
+  icon: string | null
+  lines_count: number
+}
+
+export interface QuoteSystem {
+  id: number
+  name: string
+  description: string | null
+  icon: string | null
+  templates: QuoteTemplateSummary[]
+}
+
+export interface QuoteTemplateLine {
+  id?: number
+  position?: number
+  designation: string
+  reference: string | null
+  category: Labelled<QuoteLineCategory>
+  unit: string | null
+  quantity: number
+  unit_price?: number
+  unit_cost?: number
+  coefficient?: number
+}
+
+export interface QuoteTemplate {
+  id: number
+  quote_system_id: number | null
+  system: { id: number; name: string } | null
+  name: string
+  description: string | null
+  icon: string | null
+  lines: QuoteTemplateLine[]
+}
+
+export interface QuoteTemplatePayload {
+  name: string
+  description?: string | null
+  icon?: string | null
+  quote_system_id?: number | null
+  lines?: Array<{
+    designation: string
+    reference?: string | null
+    category?: QuoteLineCategory
+    unit?: string | null
+    quantity?: number
+    unit_cost?: number
+    coefficient?: number
+  }>
 }

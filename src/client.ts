@@ -1,4 +1,13 @@
 import type {
+  DeliveryNotePayload,
+  QuoteDepositPayload,
+  QuoteEmailDraft,
+  QuoteEmailPayload,
+  QuoteExpensePayload,
+  QuoteSystem,
+  QuoteTemplate,
+  QuoteTemplatePayload,
+  QuoteTemplateSummary,
   Quote,
   QuoteFilters,
   QuoteLinePayload,
@@ -90,6 +99,17 @@ function toQueryString(query?: Query): string {
   }
   const qs = params.toString()
   return qs ? `?${qs}` : ''
+}
+
+/** Données + fichier facultatif en multipart (booléens envoyés en 1 / 0). */
+function toForm(payload: object, file?: Blob, filename?: string): FormData {
+  const form = new FormData()
+  for (const [key, value] of Object.entries(payload)) {
+    if (value === undefined) continue
+    form.append(key, value === null ? '' : typeof value === 'boolean' ? (value ? '1' : '0') : String(value))
+  }
+  if (file) form.append('file', file, filename ?? 'justificatif')
+  return form
 }
 
 export function createApiClient(options: ApiClientOptions) {
@@ -409,6 +429,90 @@ export function createApiClient(options: ApiClientOptions) {
       },
       async orderLines(sectionId: number, ids: number[]): Promise<Quote> {
         return (await request<Wrapped<Quote>>('POST', `quote-sections/${sectionId}/lines/order`, { ids })).data
+      },
+      /** Texte de proposition technique d'une section (modifiable même sur un devis accepté). */
+      async setSectionProposal(sectionId: number, proposal: string | null): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('PATCH', `quote-sections/${sectionId}`, { proposal })).data
+      },
+      /** PDF de la proposition technique. */
+      proposalPdf(id: number): Promise<Blob> {
+        return requestBlob(`quotes/${id}/proposal-pdf`)
+      },
+      /** Insère un modèle : dans une section existante, ou dans une nouvelle section à son nom. */
+      async insertTemplate(id: number, templateId: number, sectionId?: number): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('POST', `quotes/${id}/insert-template`, { template_id: templateId, quote_section_id: sectionId })).data
+      },
+      async addDeposit(id: number, payload: QuoteDepositPayload): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('POST', `quotes/${id}/deposits`, payload)).data
+      },
+      async updateDeposit(depositId: number, payload: QuoteDepositPayload): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('PATCH', `quote-deposits/${depositId}`, payload)).data
+      },
+      async removeDeposit(depositId: number): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('DELETE', `quote-deposits/${depositId}`)).data
+      },
+      /** Dépense réelle (`costs.view`), avec justificatif facultatif. */
+      async addExpense(id: number, payload: QuoteExpensePayload, file?: Blob, filename?: string): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('POST', `quotes/${id}/expenses`, toForm(payload, file, filename))).data
+      },
+      async updateExpense(expenseId: number, payload: Partial<QuoteExpensePayload>, file?: Blob, filename?: string): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('POST', `quote-expenses/${expenseId}`, toForm(payload, file, filename))).data
+      },
+      async removeExpense(expenseId: number): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('DELETE', `quote-expenses/${expenseId}`)).data
+      },
+      async addDeliveryNote(id: number, payload: DeliveryNotePayload = {}): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('POST', `quotes/${id}/delivery-notes`, payload)).data
+      },
+      async updateDeliveryNote(noteId: number, payload: DeliveryNotePayload): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('PATCH', `delivery-notes/${noteId}`, payload)).data
+      },
+      async removeDeliveryNote(noteId: number): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('DELETE', `delivery-notes/${noteId}`)).data
+      },
+      deliveryNotePdf(noteId: number): Promise<Blob> {
+        return requestBlob(`delivery-notes/${noteId}/pdf`)
+      },
+      /** Destinataires proposés (client et contacts), objet et message. */
+      async emailDraft(id: number): Promise<QuoteEmailDraft> {
+        return (await request<Wrapped<QuoteEmailDraft>>('GET', `quotes/${id}/email-draft`)).data
+      },
+      /** Envoie le devis par e-mail avec son PDF ; un brouillon passe à « Envoyé ». */
+      async send(id: number, payload: QuoteEmailPayload): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('POST', `quotes/${id}/send`, payload)).data
+      },
+    },
+
+    /** Systèmes et modèles de devis. Gestion : `quotes.update` + `costs.view`. */
+    quoteTemplates: {
+      async catalog(): Promise<{ systems: QuoteSystem[]; templates_without_system: QuoteTemplateSummary[] }> {
+        return (await request<Wrapped<{ systems: QuoteSystem[]; templates_without_system: QuoteTemplateSummary[] }>>('GET', 'quote-systems')).data
+      },
+      async get(id: number): Promise<QuoteTemplate> {
+        return (await request<Wrapped<QuoteTemplate>>('GET', `quote-templates/${id}`)).data
+      },
+      async create(payload: QuoteTemplatePayload): Promise<QuoteTemplate> {
+        return (await request<Wrapped<QuoteTemplate>>('POST', 'quote-templates', payload)).data
+      },
+      /** `lines` envoyées : elles remplacent celles du modèle. */
+      async update(id: number, payload: Partial<QuoteTemplatePayload>): Promise<QuoteTemplate> {
+        return (await request<Wrapped<QuoteTemplate>>('PATCH', `quote-templates/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `quote-templates/${id}`)
+      },
+      async fromSection(sectionId: number, payload: { name: string; description?: string | null; quote_system_id?: number | null }): Promise<QuoteTemplate> {
+        return (await request<Wrapped<QuoteTemplate>>('POST', `quote-sections/${sectionId}/save-as-template`, payload)).data
+      },
+      async createSystem(payload: { name: string; description?: string | null; icon?: string | null }): Promise<Omit<QuoteSystem, 'templates'>> {
+        return (await request<Wrapped<Omit<QuoteSystem, 'templates'>>>('POST', 'quote-systems', payload)).data
+      },
+      async updateSystem(id: number, payload: { name?: string; description?: string | null; icon?: string | null }): Promise<Omit<QuoteSystem, 'templates'>> {
+        return (await request<Wrapped<Omit<QuoteSystem, 'templates'>>>('PATCH', `quote-systems/${id}`, payload)).data
+      },
+      /** Ses modèles sont gardés, « sans système ». */
+      async removeSystem(id: number): Promise<void> {
+        await request('DELETE', `quote-systems/${id}`)
       },
     },
 
