@@ -580,11 +580,20 @@ export function createApiClient(options: ApiClientOptions) {
         return request('GET', 'email-signatures')
       },
       /** `shared: true` : signature commune à l'entreprise (`company.update`). */
-      async create(payload: { name: string; body: string; is_default?: boolean; shared?: boolean }): Promise<EmailSignature> {
+      async create(payload: { name: string; body: string; is_default?: boolean; image_width?: number; shared?: boolean }): Promise<EmailSignature> {
         return (await request<Wrapped<EmailSignature>>('POST', 'email-signatures', payload)).data
       },
-      async update(id: number, payload: { name?: string; body?: string; is_default?: boolean }): Promise<EmailSignature> {
+      async update(id: number, payload: { name?: string; body?: string; is_default?: boolean; image_width?: number }): Promise<EmailSignature> {
         return (await request<Wrapped<EmailSignature>>('PATCH', `email-signatures/${id}`, payload)).data
+      },
+      /** Photo ou logo : JPEG ou PNG, 1 Mo. */
+      async uploadImage(id: number, file: Blob, filename = 'signature.png'): Promise<EmailSignature> {
+        const form = new FormData()
+        form.append('image', file, filename)
+        return (await request<Wrapped<EmailSignature>>('POST', `email-signatures/${id}/image`, form)).data
+      },
+      async removeImage(id: number): Promise<EmailSignature> {
+        return (await request<Wrapped<EmailSignature>>('DELETE', `email-signatures/${id}/image`)).data
       },
       async remove(id: number): Promise<void> {
         await request('DELETE', `email-signatures/${id}`)

@@ -877,7 +877,7 @@ export interface QuoteEmailDraft {
   /** Sans signature : celle choisie (`signature_id`) est ajoutée sous le message à l'envoi. */
   message: string
   default_signature_id: number | null
-  signatures: Array<{ id: number; name: string; shared: boolean; preview: string }>
+  signatures: Array<{ id: number; name: string; shared: boolean; preview: string; image_url: string | null; image_width: number }>
 }
 
 export interface QuoteEmailPayload {
@@ -959,6 +959,10 @@ export interface EmailSignature {
   shared: boolean
   /** Texte avec les informations du compte connecté. */
   preview: string
+  /** Photo ou logo sous le texte (intégré au message à l'envoi). */
+  image_url: string | null
+  /** Largeur de l'image dans l'e-mail, en pixels (40 à 600). */
+  image_width: number
   can_edit: boolean
 }
 
