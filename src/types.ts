@@ -256,3 +256,130 @@ export interface ContactFilters extends SyncFilters {
   search?: string
   client_id?: number
 }
+
+// ---------------------------------------------------------------------------
+// Demandes clients
+// ---------------------------------------------------------------------------
+
+export type ClientRequestStatus = 'new' | 'in_progress' | 'done' | 'dismissed'
+export type ClientRequestSource = 'phone' | 'whatsapp' | 'email' | 'visit' | 'other'
+export type Priority = 'low' | 'normal' | 'high'
+
+export const CLIENT_REQUEST_STATUS_LABELS: Record<ClientRequestStatus, string> = {
+  new: 'Nouvelle',
+  in_progress: 'En cours',
+  done: 'Traitée',
+  dismissed: 'Classée sans suite',
+}
+
+/** Statuts de la boîte « À traiter ». */
+export const OPEN_CLIENT_REQUEST_STATUSES: ClientRequestStatus[] = ['new', 'in_progress']
+
+export const CLIENT_REQUEST_SOURCE_LABELS: Record<ClientRequestSource, string> = {
+  phone: 'Appel',
+  whatsapp: 'WhatsApp',
+  email: 'E-mail',
+  visit: 'Visite',
+  other: 'Autre',
+}
+
+export const PRIORITY_LABELS: Record<Priority, string> = {
+  low: 'Basse',
+  normal: 'Normale',
+  high: 'Urgente',
+}
+
+export interface UserRef {
+  id: number
+  full_name: string
+}
+
+export interface ClientRequest {
+  id: number
+  client_uuid: string | null
+  body: string
+  client_id: number | null
+  client?: { id: number; name: string } | null
+  /** Personne qui n'est pas encore cliente. */
+  contact_name: string | null
+  contact_phone: string | null
+  source: Labelled<ClientRequestSource>
+  status: Labelled<ClientRequestStatus>
+  priority: Labelled<Priority>
+  assigned_to: number | null
+  assignee?: UserRef | null
+  creator?: UserRef | null
+  processor?: UserRef | null
+  remind_at: string | null
+  processed_at: string | null
+  /** Encore « Nouvelle » après le délai de relance (2 jours par défaut). */
+  is_overdue: boolean
+  /** Ce que la demande est devenue (tâche, devis, projet…). */
+  converted_to: { type: string; id: number } | null
+  created_at: string | null
+  updated_at: string | null
+  deleted_at: string | null
+}
+
+export interface ClientRequestPayload {
+  client_uuid?: string
+  body: string
+  client_id?: number | null
+  contact_name?: string | null
+  contact_phone?: string | null
+  source?: ClientRequestSource
+  /** Ignorés pour un compte qui ne traite pas les demandes (technicien). */
+  status?: ClientRequestStatus
+  priority?: Priority
+  assigned_to?: number | null
+  remind_at?: string | null
+}
+
+export interface ClientRequestFilters extends SyncFilters {
+  /** Boîte « À traiter » : Nouvelle et En cours. */
+  open?: boolean
+  /** Plusieurs statuts séparés par des virgules, ex. `done,dismissed`. */
+  status?: string
+  assigned?: 'me' | 'none'
+  client_id?: number
+  priority?: Priority
+  source?: ClientRequestSource
+  overdue?: boolean
+  search?: string
+}
+
+export interface ClientRequestSummary {
+  open: number
+  new: number
+  overdue: number
+  mine: number
+  reminders_due: number
+  overdue_days: number
+}
+
+export interface Assignee {
+  id: number
+  full_name: string
+  job_title: string | null
+  account_type: AccountType
+}
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+export interface AppNotification {
+  id: string
+  /** Ex. `client_request.overdue`, `client_request.reminder`. */
+  kind: string
+  title: string
+  body: string
+  client_request_id?: number
+  read_at: string | null
+  created_at: string | null
+}
+
+export interface NotificationPage {
+  data: AppNotification[]
+  meta: { current_page: number; last_page: number; per_page: number; total: number; unread_count: number }
+}

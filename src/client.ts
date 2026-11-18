@@ -1,5 +1,11 @@
 import type {
+  Assignee,
+  AppNotification,
   Client,
+  ClientRequest,
+  ClientRequestFilters,
+  ClientRequestPayload,
+  ClientRequestSummary,
   ClientFilters,
   ClientPayload,
   Contact,
@@ -8,6 +14,7 @@ import type {
   CurrentUser,
   LoginPayload,
   LoginResponse,
+  NotificationPage,
   Paginated,
   Role,
   SyncFilters,
@@ -194,6 +201,48 @@ export function createApiClient(options: ApiClientOptions) {
       },
       async remove(id: number): Promise<void> {
         await request('DELETE', `contacts/${id}`)
+      },
+    },
+
+    clientRequests: {
+      list(filters: ClientRequestFilters = {}): Promise<SyncPaginated<ClientRequest>> {
+        return request('GET', 'client-requests', undefined, { ...filters })
+      },
+      /** Compteurs : à traiter, nouvelles, en retard, confiées à moi, rappels arrivés. */
+      async summary(): Promise<ClientRequestSummary> {
+        return (await request<Wrapped<ClientRequestSummary>>('GET', 'client-requests/summary')).data
+      },
+      async get(id: number): Promise<ClientRequest> {
+        return (await request<Wrapped<ClientRequest>>('GET', `client-requests/${id}`)).data
+      },
+      /** Saisie express : seul `body` est obligatoire. */
+      async create(payload: ClientRequestPayload): Promise<ClientRequest> {
+        return (await request<Wrapped<ClientRequest>>('POST', 'client-requests', payload)).data
+      },
+      async update(id: number, payload: Partial<Omit<ClientRequestPayload, 'client_uuid'>>): Promise<ClientRequest> {
+        return (await request<Wrapped<ClientRequest>>('PATCH', `client-requests/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `client-requests/${id}`)
+      },
+    },
+
+    assignees: {
+      /** Personnes actives à qui confier une demande ou une tâche. */
+      async list(): Promise<Assignee[]> {
+        return (await request<Wrapped<Assignee[]>>('GET', 'assignees')).data
+      },
+    },
+
+    notifications: {
+      list(options: { unread?: boolean; page?: number; per_page?: number } = {}): Promise<NotificationPage> {
+        return request('GET', 'notifications', undefined, { ...options })
+      },
+      async read(id: AppNotification['id']): Promise<void> {
+        await request('POST', `notifications/${id}/read`)
+      },
+      async readAll(): Promise<void> {
+        await request('POST', 'notifications/read-all')
       },
     },
 

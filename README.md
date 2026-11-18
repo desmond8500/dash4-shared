@@ -15,7 +15,7 @@ const { user } = await api.auth.login({ email, password, device_name: 'Web' })
 if (can(user, 'users.view')) { /* … */ }
 ```
 
-Modules disponibles : `auth`, `users`, `roles`, `clients`, `contacts` (`list`, `get`, `create`, `update`, `remove`) ; logo d'un client : `clients.uploadLogo(id, fichier)` et `clients.removeLogo(id)`.
+Modules disponibles : `auth`, `users`, `roles`, `clients`, `contacts`, `clientRequests` (+ `summary`), `assignees`, `notifications` (`list`, `get`, `create`, `update`, `remove`) ; logo d'un client : `clients.uploadLogo(id, fichier)` et `clients.removeLogo(id)`.
 
 Synchronisation du mobile : `api.syncAll((f) => api.clients.list(f), derniereSynchro)` renvoie toutes les fiches modifiées depuis (suppressions comprises, `deleted_at` rempli) et le `serverTime` à garder pour la synchro suivante.
 

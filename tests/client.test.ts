@@ -135,4 +135,38 @@ describe('client API', () => {
     expect(init.headers.Authorization).toBe('Bearer t')
     expect(client.logo_url).toBe('https://x/logo.png')
   })
+
+  it('note une demande client et filtre la boîte « À traiter »', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(201, { data: { id: 3, body: 'Rappeler M. Diop' } }))
+      .mockResolvedValueOnce(jsonResponse(200, { data: [], meta: { server_time: 'T' } }))
+      .mockResolvedValueOnce(jsonResponse(200, { data: { open: 4, overdue: 1 } }))
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+
+    const created = await api.clientRequests.create({ body: 'Rappeler M. Diop', source: 'phone' })
+    await api.clientRequests.list({ open: true, assigned: 'me' })
+    const summary = await api.clientRequests.summary()
+
+    expect(created.id).toBe(3)
+    expect(fetch.mock.calls[0]?.[0]).toBe('https://api.test/api/v1/client-requests')
+    expect(fetch.mock.calls[1]?.[0]).toBe('https://api.test/api/v1/client-requests?open=1&assigned=me')
+    expect(summary.open).toBe(4)
+  })
+
+  it('lit les notifications et les marque comme lues', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(200, { data: [], meta: { unread_count: 2 } }))
+      .mockResolvedValueOnce(jsonResponse(200, { message: 'ok' }))
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+
+    const page = await api.notifications.list({ unread: true })
+    await api.notifications.read('abc-1')
+
+    expect(page.meta.unread_count).toBe(2)
+    expect(fetch.mock.calls[0]?.[0]).toBe('https://api.test/api/v1/notifications?unread=1')
+    expect(fetch.mock.calls[1]?.[0]).toBe('https://api.test/api/v1/notifications/abc-1/read')
+    expect(fetch.mock.calls[1]?.[1]?.method).toBe('POST')
+  })
 })
