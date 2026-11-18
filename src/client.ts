@@ -575,6 +575,17 @@ export function createApiClient(options: ApiClientOptions) {
       async list(search?: string): Promise<Brand[]> {
         return (await request<Wrapped<Brand[]>>('GET', 'brands', undefined, { search })).data
       },
+      async get(id: number): Promise<Brand> {
+        return (await request<Wrapped<Brand>>('GET', `brands/${id}`)).data
+      },
+      async uploadLogo(id: number, file: Blob, filename = 'logo'): Promise<Brand> {
+        const form = new FormData()
+        form.append('logo', file, filename)
+        return (await request<Wrapped<Brand>>('POST', `brands/${id}/logo`, form)).data
+      },
+      async removeLogo(id: number): Promise<Brand> {
+        return (await request<Wrapped<Brand>>('DELETE', `brands/${id}/logo`)).data
+      },
       async create(payload: { name: string; description?: string | null; website?: string | null }): Promise<Brand> {
         return (await request<Wrapped<Brand>>('POST', 'brands', payload)).data
       },
@@ -593,6 +604,14 @@ export function createApiClient(options: ApiClientOptions) {
       },
       async get(id: number): Promise<Provider> {
         return (await request<Wrapped<Provider>>('GET', `providers/${id}`)).data
+      },
+      async uploadLogo(id: number, file: Blob, filename = 'logo'): Promise<Provider> {
+        const form = new FormData()
+        form.append('logo', file, filename)
+        return (await request<Wrapped<Provider>>('POST', `providers/${id}/logo`, form)).data
+      },
+      async removeLogo(id: number): Promise<Provider> {
+        return (await request<Wrapped<Provider>>('DELETE', `providers/${id}/logo`)).data
       },
       async create(payload: ProviderPayload & { name: string }): Promise<Provider> {
         return (await request<Wrapped<Provider>>('POST', 'providers', payload)).data

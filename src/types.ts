@@ -402,7 +402,7 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
 export const ACTIVE_PROJECT_STATUSES: ProjectStatus[] = ['planned', 'in_progress', 'on_hold']
 
 /** Fiches qui acceptent notes, liens et documents (segment de l'adresse de l'API). */
-export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'providers' | 'purchases'
+export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases'
 
 export interface Note {
   id: number
@@ -1159,7 +1159,9 @@ export interface Brand {
   name: string
   description: string | null
   website: string | null
+  logo_url: string | null
   articles_count: number
+  can: { update: boolean; delete: boolean }
 }
 
 export interface Provider {
@@ -1170,14 +1172,20 @@ export interface Provider {
   phone: string | null
   email: string | null
   address: string | null
+  latitude: number | null
+  longitude: number | null
   website: string | null
   description: string | null
+  logo_url: string | null
   articles_count: number
+  /** Sur la fiche. */
+  purchases_count: number | null
+  can: { update: boolean; delete: boolean }
   updated_at: string | null
   deleted_at: string | null
 }
 
-export type ProviderPayload = Partial<Omit<Provider, 'id' | 'articles_count' | 'updated_at' | 'deleted_at'>> & { name?: string }
+export type ProviderPayload = Partial<Omit<Provider, 'id' | 'articles_count' | 'purchases_count' | 'logo_url' | 'can' | 'updated_at' | 'deleted_at'>> & { name?: string }
 
 export type StockMovementType = 'in' | 'out' | 'inventory' | 'purchase' | 'delivery'
 
