@@ -4,6 +4,13 @@ import type {
   DeliveryNotePayload,
   QuoteDepositPayload,
   QuoteEmailDraft,
+  Invoice,
+  InvoiceCreatePayload,
+  InvoiceFilters,
+  InvoiceLinePayload,
+  InvoicePayload,
+  InvoicePaymentPayload,
+  InvoiceSummary,
   QuoteEmailPayload,
   QuoteExpensePayload,
   QuoteSystem,
@@ -482,6 +489,63 @@ export function createApiClient(options: ApiClientOptions) {
       /** Envoie le devis par e-mail avec son PDF ; un brouillon passe à « Envoyé ». */
       async send(id: number, payload: QuoteEmailPayload): Promise<Quote> {
         return (await request<Wrapped<Quote>>('POST', `quotes/${id}/send`, payload)).data
+      },
+    },
+
+    /** Factures et paiements : `invoices.*` ; émission et annulation : `invoices.issue`. */
+    invoices: {
+      list(filters: InvoiceFilters = {}): Promise<SyncPaginated<Invoice>> {
+        const { unpaid, overdue, ...rest } = filters
+        return request('GET', 'invoices', undefined, { ...rest, ...(unpaid ? { unpaid: 1 } : {}), ...(overdue ? { overdue: 1 } : {}) })
+      },
+      async summary(): Promise<InvoiceSummary> {
+        return (await request<Wrapped<InvoiceSummary>>('GET', 'invoices/summary')).data
+      },
+      async get(id: number): Promise<Invoice> {
+        return (await request<Wrapped<Invoice>>('GET', `invoices/${id}`)).data
+      },
+      /** Crée un brouillon (sans numéro). */
+      async create(payload: InvoiceCreatePayload): Promise<Invoice> {
+        return (await request<Wrapped<Invoice>>('POST', 'invoices', payload)).data
+      },
+      /** Brouillon : tout ; facture émise : `notes` seulement. */
+      async update(id: number, payload: InvoicePayload): Promise<Invoice> {
+        return (await request<Wrapped<Invoice>>('PATCH', `invoices/${id}`, payload)).data
+      },
+      /** Brouillon seulement. */
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `invoices/${id}`)
+      },
+      async addLine(id: number, payload: InvoiceLinePayload): Promise<Invoice> {
+        return (await request<Wrapped<Invoice>>('POST', `invoices/${id}/lines`, payload)).data
+      },
+      async updateLine(lineId: number, payload: Partial<InvoiceLinePayload>): Promise<Invoice> {
+        return (await request<Wrapped<Invoice>>('PATCH', `invoice-lines/${lineId}`, payload)).data
+      },
+      async removeLine(lineId: number): Promise<Invoice> {
+        return (await request<Wrapped<Invoice>>('DELETE', `invoice-lines/${lineId}`)).data
+      },
+      /** Attribue le numéro FAC et verrouille la facture ; échéance à 30 jours par défaut. */
+      async issue(id: number, payload: { issued_at?: string; due_at?: string | null } = {}): Promise<Invoice> {
+        return (await request<Wrapped<Invoice>>('POST', `invoices/${id}/issue`, payload)).data
+      },
+      async cancel(id: number): Promise<Invoice> {
+        return (await request<Wrapped<Invoice>>('POST', `invoices/${id}/cancel`)).data
+      },
+      async addPayment(id: number, payload: InvoicePaymentPayload): Promise<Invoice> {
+        return (await request<Wrapped<Invoice>>('POST', `invoices/${id}/payments`, payload)).data
+      },
+      async removePayment(paymentId: number): Promise<Invoice> {
+        return (await request<Wrapped<Invoice>>('DELETE', `invoice-payments/${paymentId}`)).data
+      },
+      pdf(id: number): Promise<Blob> {
+        return requestBlob(`invoices/${id}/pdf`)
+      },
+      async emailDraft(id: number): Promise<QuoteEmailDraft> {
+        return (await request<Wrapped<QuoteEmailDraft>>('GET', `invoices/${id}/email-draft`)).data
+      },
+      async send(id: number, payload: Omit<QuoteEmailPayload, 'attach_proposal'>): Promise<Invoice> {
+        return (await request<Wrapped<Invoice>>('POST', `invoices/${id}/send`, payload)).data
       },
     },
 

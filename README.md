@@ -44,3 +44,10 @@ npm run build
 À chaque changement de l'API (dash4-api), mettre à jour `src/types.ts` et la version dans `package.json`, puis lancer `npm update @dash4/shared` dans dash4-web et dash4-mobile. Des tags (`v0.2.0`…) peuvent être ajoutés depuis GitHub pour figer des versions.
 
 Les règles de droits (`can`, `canSee`, `isTechnician`…) ne font que **cacher** ce que l'API refuse déjà : la vérification réelle est toujours faite par le serveur.
+
+### Factures (0.10.0)
+
+`api.invoices` : `list` (filtres `status`, `unpaid`, `overdue`, `client_id`, `quote_id`…), `summary`, `create`
+(depuis un devis : `{ quote_id, scope, percent, title }` ; depuis un acompte : `{ quote_deposit_id }` ; libre :
+`{ client_id, title }`), `update`, lignes, `issue`, `cancel`, `addPayment` / `removePayment`, `pdf`, `emailDraft`, `send`.
+Listes `INVOICE_SCOPES` et `PAYMENT_METHODS` pour les formulaires.

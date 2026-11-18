@@ -282,6 +282,22 @@ describe('client API', () => {
     expect(JSON.parse(fetch.mock.calls[1]?.[1]?.body)).toEqual({ template_id: 12 })
   })
 
+  it('crée, émet et encaisse une facture', async () => {
+    const fetch = vi.fn().mockImplementation(async () => jsonResponse(200, { data: { id: 8 } }))
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+
+    await api.invoices.create({ quote_id: 3, scope: 'equipment', percent: 40, title: 'Acompte matériel' })
+    await api.invoices.issue(8)
+    await api.invoices.addPayment(8, { amount: 50000, method: 'wave' })
+    await api.invoices.list({ overdue: true, unpaid: false, client_id: 2 })
+
+    expect(JSON.parse(fetch.mock.calls[0]?.[1]?.body)).toEqual({ quote_id: 3, scope: 'equipment', percent: 40, title: 'Acompte matériel' })
+    expect(fetch.mock.calls[1]?.[0]).toBe('https://api.test/api/v1/invoices/8/issue')
+    expect(fetch.mock.calls[2]?.[0]).toBe('https://api.test/api/v1/invoices/8/payments')
+    expect(fetch.mock.calls[3]?.[0]).toContain('overdue=1')
+    expect(fetch.mock.calls[3]?.[0]).not.toContain('unpaid')
+  })
+
   it('gère les signatures d\'e-mail', async () => {
     const fetch = vi
       .fn()

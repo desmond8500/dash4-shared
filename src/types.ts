@@ -402,7 +402,7 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
 export const ACTIVE_PROJECT_STATUSES: ProjectStatus[] = ['planned', 'in_progress', 'on_hold']
 
 /** Fiches qui acceptent notes, liens et documents (segment de l'adresse de l'API). */
-export type AttachableType = 'clients' | 'projects' | 'quotes'
+export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices'
 
 export interface Note {
   id: number
@@ -712,6 +712,10 @@ export interface Quote {
   real_margin?: number
   delivery_notes?: DeliveryNote[]
   emails?: QuoteEmailRecord[]
+  /** Factures du devis et reste à facturer (hors taxes) : `prices.view`, sur la fiche. */
+  invoices?: QuoteInvoiceSummary[]
+  invoiced_net?: number
+  remaining_to_invoice?: number
   sent_at: string | null
   decided_at: string | null
   signed_at: string | null
@@ -973,4 +977,169 @@ export interface EmailSignatureList {
     default_id: number | null
     can_manage_shared: boolean
   }
+}
+
+// ---------------------------------------------------------------------------
+// Factures et paiements (`invoices.view` ; jamais un technicien)
+// ---------------------------------------------------------------------------
+
+export type InvoiceStatus = 'draft' | 'issued' | 'partially_paid' | 'paid' | 'cancelled'
+
+/** Partie du devis facturée ; `custom` : facture libre. */
+export type InvoiceScope = 'all' | 'equipment' | 'equipment_accessories' | 'labor' | 'remainder' | 'custom'
+
+export type PaymentMethod = 'bank_transfer' | 'cheque' | 'cash' | 'wave' | 'orange_money' | 'free_money' | 'card' | 'other'
+
+export const INVOICE_SCOPES: Array<{ value: Exclude<InvoiceScope, 'custom'>; label: string }> = [
+  { value: 'all', label: 'Tout le devis' },
+  { value: 'equipment', label: 'Matériel' },
+  { value: 'equipment_accessories', label: 'Matériel + accessoires' },
+  { value: 'labor', label: "Main-d'œuvre" },
+  { value: 'remainder', label: 'Reliquat (solde)' },
+]
+
+export const PAYMENT_METHODS: Array<{ value: PaymentMethod; label: string }> = [
+  { value: 'bank_transfer', label: 'Virement' },
+  { value: 'cheque', label: 'Chèque' },
+  { value: 'cash', label: 'Espèces' },
+  { value: 'wave', label: 'Wave' },
+  { value: 'orange_money', label: 'Orange Money' },
+  { value: 'free_money', label: 'Free Money' },
+  { value: 'card', label: 'Carte bancaire' },
+  { value: 'other', label: 'Autre' },
+]
+
+export interface QuoteInvoiceSummary {
+  id: number
+  number: string | null
+  title: string
+  status: Labelled<InvoiceStatus>
+  subtotal: number
+  total: number
+  paid_amount: number
+  quote_deposit_id: number | null
+}
+
+export interface InvoiceLine {
+  id: number
+  position: number
+  designation: string
+  reference: string | null
+  unit: string | null
+  quantity: number
+  /** Négatif pour une remise ou une déduction. */
+  unit_price: number
+  line_total: number
+}
+
+export interface InvoicePayment {
+  id: number
+  amount: number
+  paid_at: string | null
+  method: Labelled<PaymentMethod>
+  reference: string | null
+  note: string | null
+  creator: UserRef | null
+}
+
+export interface Invoice {
+  id: number
+  client_uuid: string | null
+  /** Attribué à l'émission ; `null` pour un brouillon. */
+  number: string | null
+  title: string
+  status: Labelled<InvoiceStatus>
+  scope: Labelled<InvoiceScope>
+  percent: number
+  quote_id: number | null
+  quote?: { id: number; number: string; title: string; total: number } | null
+  quote_deposit_id: number | null
+  client_id: number
+  client?: { id: number; name: string } | null
+  project_id: number | null
+  project?: { id: number; name: string } | null
+  issued_at: string | null
+  due_at: string | null
+  is_overdue: boolean
+  introduction: string | null
+  payment_terms: string | null
+  notes: string | null
+  tax_mode: Labelled<TaxMode>
+  vat_rate: number
+  brs_rate: number
+  bank_account_id: number | null
+  bank_account?: { id: number; bank_name: string; label: string | null } | null
+  show_signature: boolean
+  subtotal: number
+  tax_amount: number
+  total: number
+  paid_amount: number
+  remaining_amount: number
+  paid_at: string | null
+  /** Sur la fiche. */
+  lines?: InvoiceLine[]
+  payments?: InvoicePayment[]
+  emails?: QuoteEmailRecord[]
+  creator?: UserRef | null
+  issuer?: UserRef | null
+  /** `edit` : brouillon modifiable ; `issue` : émettre ou annuler. */
+  can: { update: boolean; edit: boolean; issue: boolean; delete: boolean }
+  created_at: string | null
+  updated_at: string | null
+  deleted_at: string | null
+}
+
+export interface InvoiceFilters extends SyncFilters {
+  search?: string
+  /** Plusieurs statuts séparés par des virgules. */
+  status?: string
+  unpaid?: boolean
+  overdue?: boolean
+  client_id?: number
+  quote_id?: number
+  project_id?: number
+  year?: number
+}
+
+export interface InvoiceSummary {
+  to_collect: number
+  unpaid_count: number
+  overdue_amount: number
+  overdue_count: number
+  collected_this_month: number
+  drafts: number
+}
+
+/** Trois façons de créer : depuis un devis accepté, depuis un acompte prévu, ou libre. */
+export type InvoiceCreatePayload = { client_uuid?: string } & (
+  | { quote_id: number; scope: Exclude<InvoiceScope, 'custom'>; percent?: number; title?: string | null }
+  | { quote_deposit_id: number }
+  | { client_id: number; title?: string | null }
+)
+
+export interface InvoicePayload {
+  title?: string
+  introduction?: string | null
+  payment_terms?: string | null
+  notes?: string | null
+  due_at?: string | null
+  tax_mode?: TaxMode
+  bank_account_id?: number | null
+  show_signature?: boolean
+}
+
+export interface InvoiceLinePayload {
+  designation: string
+  reference?: string | null
+  unit?: string | null
+  quantity?: number
+  unit_price: number
+}
+
+export interface InvoicePaymentPayload {
+  amount: number
+  paid_at?: string
+  method: PaymentMethod
+  reference?: string | null
+  note?: string | null
 }
