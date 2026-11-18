@@ -213,7 +213,7 @@ describe('client API', () => {
 
     const result = await api.clientRequests.convert(1, { type: 'project', client_id: 3 })
 
-    expect(result.project.id).toBe(2)
+    expect(result.project?.id).toBe(2)
     expect(fetch.mock.calls[0]?.[0]).toBe('https://api.test/api/v1/client-requests/1/convert')
   })
 
