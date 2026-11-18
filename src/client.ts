@@ -1,9 +1,17 @@
 import type {
+  Client,
+  ClientFilters,
+  ClientPayload,
+  Contact,
+  ContactFilters,
+  ContactPayload,
   CurrentUser,
   LoginPayload,
   LoginResponse,
   Paginated,
   Role,
+  SyncFilters,
+  SyncPaginated,
   User,
   UserFilters,
   UserPayload,
@@ -139,6 +147,64 @@ export function createApiClient(options: ApiClientOptions) {
       async list(): Promise<Role[]> {
         return (await request<Wrapped<Role[]>>('GET', 'roles')).data
       },
+    },
+
+    clients: {
+      list(filters: ClientFilters = {}): Promise<SyncPaginated<Client>> {
+        return request('GET', 'clients', undefined, { ...filters })
+      },
+      /** Fiche complète : contacts, téléphones et e-mails. */
+      async get(id: number): Promise<Client> {
+        return (await request<Wrapped<Client>>('GET', `clients/${id}`)).data
+      },
+      async create(payload: ClientPayload): Promise<Client> {
+        return (await request<Wrapped<Client>>('POST', 'clients', payload)).data
+      },
+      async update(id: number, payload: Partial<Omit<ClientPayload, 'client_uuid'>>): Promise<Client> {
+        return (await request<Wrapped<Client>>('PATCH', `clients/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `clients/${id}`)
+      },
+    },
+
+    contacts: {
+      list(filters: ContactFilters = {}): Promise<SyncPaginated<Contact>> {
+        return request('GET', 'contacts', undefined, { ...filters })
+      },
+      async get(id: number): Promise<Contact> {
+        return (await request<Wrapped<Contact>>('GET', `contacts/${id}`)).data
+      },
+      async create(payload: ContactPayload): Promise<Contact> {
+        return (await request<Wrapped<Contact>>('POST', 'contacts', payload)).data
+      },
+      async update(id: number, payload: Partial<Omit<ContactPayload, 'client_uuid'>>): Promise<Contact> {
+        return (await request<Wrapped<Contact>>('PATCH', `contacts/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `contacts/${id}`)
+      },
+    },
+
+    /**
+     * Récupère toutes les pages d'une liste depuis `updated_since` (synchro du mobile).
+     * Renvoie les fiches (suppressions comprises) et le `server_time` à garder pour la fois suivante.
+     */
+    async syncAll<T>(
+      list: (filters: SyncFilters) => Promise<SyncPaginated<T>>,
+      updatedSince?: string | null,
+    ): Promise<{ items: T[]; serverTime: string }> {
+      const items: T[] = []
+      let page = 1
+      let serverTime = ''
+      for (;;) {
+        const response = await list({ updated_since: updatedSince ?? undefined, page, per_page: 500 })
+        items.push(...response.data)
+        if (page === 1) serverTime = response.meta.server_time
+        if (page >= (response.meta.last_page ?? 1)) break
+        page++
+      }
+      return { items, serverTime }
     },
   }
 }

@@ -105,3 +105,152 @@ export interface Paginated<T> {
 export interface Wrapped<T> {
   data: T
 }
+
+/** Valeur d'énumération renvoyée par l'API : code + libellé français. */
+export interface Labelled<V extends string> {
+  value: V
+  label: string
+}
+
+/** Réponse de liste paginée ; `meta.server_time` sert de `updated_since` à la synchro suivante. */
+export interface SyncPaginated<T> {
+  data: T[]
+  meta: PaginationMeta & { server_time: string }
+}
+
+export interface SyncFilters {
+  /** Date ISO : ne renvoie que les fiches modifiées depuis, suppressions comprises. */
+  updated_since?: string
+  page?: number
+  per_page?: number
+}
+
+// ---------------------------------------------------------------------------
+// Clients et contacts
+// ---------------------------------------------------------------------------
+
+export type ClientType = 'company' | 'individual' | 'public_body' | 'association'
+export type ClientStatus = 'prospect' | 'active' | 'inactive'
+export type Civility = 'mr' | 'mrs'
+
+export const CLIENT_TYPE_LABELS: Record<ClientType, string> = {
+  company: 'Entreprise',
+  individual: 'Particulier',
+  public_body: 'Organisme public',
+  association: 'Association',
+}
+
+export const CLIENT_STATUS_LABELS: Record<ClientStatus, string> = {
+  prospect: 'Prospect',
+  active: 'Client actif',
+  inactive: 'Inactif',
+}
+
+export const CIVILITY_LABELS: Record<Civility, string> = {
+  mr: 'M.',
+  mrs: 'Mme',
+}
+
+export interface Phone {
+  id: number
+  label: string | null
+  number: string
+}
+
+export interface Email {
+  id: number
+  label: string | null
+  address: string
+}
+
+export interface PhoneInput {
+  label?: string | null
+  number: string
+}
+
+export interface EmailInput {
+  label?: string | null
+  address: string
+}
+
+export interface Contact {
+  id: number
+  client_uuid: string | null
+  client_id: number | null
+  client?: { id: number; name: string } | null
+  civility: Labelled<Civility> | null
+  firstname: string
+  lastname: string | null
+  full_name: string
+  job_title: string | null
+  company: string | null
+  email: string | null
+  phone: string | null
+  notes: string | null
+  phones?: Phone[]
+  emails?: Email[]
+  created_at: string | null
+  updated_at: string | null
+  deleted_at: string | null
+}
+
+export interface Client {
+  id: number
+  client_uuid: string | null
+  name: string
+  type: Labelled<ClientType>
+  status: Labelled<ClientStatus>
+  description: string | null
+  address: string | null
+  is_favorite: boolean
+  contacts_count?: number
+  /** Présents seulement sur la fiche (GET /clients/{id}). */
+  contacts?: Contact[]
+  phones?: Phone[]
+  emails?: Email[]
+  created_at: string | null
+  updated_at: string | null
+  deleted_at: string | null
+}
+
+export interface ClientPayload {
+  /** Identifiant généré par le mobile pour éviter les doublons quand l'envoi est rejoué (création seulement). */
+  client_uuid?: string
+  name: string
+  type?: ClientType
+  status?: ClientStatus
+  description?: string | null
+  address?: string | null
+  is_favorite?: boolean
+  /** Envoyé : remplace la liste. Absent : la liste ne change pas. */
+  phones?: PhoneInput[]
+  emails?: EmailInput[]
+}
+
+export interface ClientFilters extends SyncFilters {
+  search?: string
+  type?: ClientType
+  status?: ClientStatus
+  favorite?: boolean
+  sort?: 'name' | '-updated_at'
+}
+
+export interface ContactPayload {
+  client_uuid?: string
+  client_id?: number | null
+  civility?: Civility | null
+  firstname: string
+  lastname?: string | null
+  job_title?: string | null
+  company?: string | null
+  email?: string | null
+  phone?: string | null
+  notes?: string | null
+  phones?: PhoneInput[]
+  emails?: EmailInput[]
+}
+
+export interface ContactFilters extends SyncFilters {
+  search?: string
+  client_id?: number
+}

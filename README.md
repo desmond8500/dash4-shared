@@ -15,6 +15,10 @@ const { user } = await api.auth.login({ email, password, device_name: 'Web' })
 if (can(user, 'users.view')) { /* … */ }
 ```
 
+Modules disponibles : `auth`, `users`, `roles`, `clients`, `contacts` (`list`, `get`, `create`, `update`, `remove`).
+
+Synchronisation du mobile : `api.syncAll((f) => api.clients.list(f), derniereSynchro)` renvoie toutes les fiches modifiées depuis (suppressions comprises, `deleted_at` rempli) et le `serverTime` à garder pour la synchro suivante.
+
 ## Installation dans un projet
 
 Le paquet est installé directement depuis GitHub :
