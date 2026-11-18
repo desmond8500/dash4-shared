@@ -1,4 +1,6 @@
 import type {
+  EmailSignature,
+  EmailSignatureList,
   DeliveryNotePayload,
   QuoteDepositPayload,
   QuoteEmailDraft,
@@ -569,6 +571,23 @@ export function createApiClient(options: ApiClientOptions) {
       },
       async numberingPreview(type: DocumentType, format?: string): Promise<string> {
         return (await request<Wrapped<{ next: string }>>('GET', 'settings/numbering-preview', undefined, { type, format })).data.next
+      },
+    },
+
+    /** Signatures d'e-mail : les siennes, et celles de l'entreprise. */
+    emailSignatures: {
+      list(): Promise<EmailSignatureList> {
+        return request('GET', 'email-signatures')
+      },
+      /** `shared: true` : signature commune à l'entreprise (`company.update`). */
+      async create(payload: { name: string; body: string; is_default?: boolean; shared?: boolean }): Promise<EmailSignature> {
+        return (await request<Wrapped<EmailSignature>>('POST', 'email-signatures', payload)).data
+      },
+      async update(id: number, payload: { name?: string; body?: string; is_default?: boolean }): Promise<EmailSignature> {
+        return (await request<Wrapped<EmailSignature>>('PATCH', `email-signatures/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `email-signatures/${id}`)
       },
     },
 

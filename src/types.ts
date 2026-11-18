@@ -874,7 +874,10 @@ export interface QuoteEmailRecord {
 export interface QuoteEmailDraft {
   suggestions: Array<{ email: string; name: string; label: string | null }>
   subject: string
+  /** Sans signature : celle choisie (`signature_id`) est ajoutée sous le message à l'envoi. */
   message: string
+  default_signature_id: number | null
+  signatures: Array<{ id: number; name: string; shared: boolean; preview: string }>
 }
 
 export interface QuoteEmailPayload {
@@ -883,6 +886,7 @@ export interface QuoteEmailPayload {
   subject: string
   message: string
   attach_proposal?: boolean
+  signature_id?: number | null
 }
 
 export interface QuoteTemplateSummary {
@@ -939,4 +943,30 @@ export interface QuoteTemplatePayload {
     unit_cost?: number
     coefficient?: number
   }>
+}
+
+// ---------------------------------------------------------------------------
+// Signatures d'e-mail
+// ---------------------------------------------------------------------------
+
+export interface EmailSignature {
+  id: number
+  name: string
+  /** Texte avec variables : {nom} {prenom} {fonction} {telephone} {email} {entreprise} {site} {adresse}. */
+  body: string
+  is_default: boolean
+  /** Commune à l'entreprise (gérée avec `company.update`). */
+  shared: boolean
+  /** Texte avec les informations du compte connecté. */
+  preview: string
+  can_edit: boolean
+}
+
+export interface EmailSignatureList {
+  data: EmailSignature[]
+  meta: {
+    variables: Array<{ key: string; label: string }>
+    default_id: number | null
+    can_manage_shared: boolean
+  }
 }

@@ -281,4 +281,16 @@ describe('client API', () => {
     expect(JSON.parse(fetch.mock.calls[0]?.[1]?.body).attach_proposal).toBe(true)
     expect(JSON.parse(fetch.mock.calls[1]?.[1]?.body)).toEqual({ template_id: 12 })
   })
+
+  it('gère les signatures d\'e-mail', async () => {
+    const fetch = vi
+      .fn()
+      .mockImplementationOnce(async () => jsonResponse(200, { data: [], meta: { variables: [], default_id: null, can_manage_shared: false } }))
+      .mockImplementationOnce(async () => jsonResponse(201, { data: { id: 4, preview: 'Moussa' } }))
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+
+    expect((await api.emailSignatures.list()).meta.default_id).toBeNull()
+    expect((await api.emailSignatures.create({ name: 'Courte', body: '{prenom}', is_default: true })).id).toBe(4)
+    expect(fetch.mock.calls[1]?.[0]).toBe('https://api.test/api/v1/email-signatures')
+  })
 })
