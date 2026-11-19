@@ -368,3 +368,21 @@ describe('client API', () => {
     expect(fetch.mock.calls[1]?.[0]).toBe('https://api.test/api/v1/email-signatures')
   })
 })
+
+describe('espace technicien', () => {
+  it('envoie les filtres des informations temporaires et la décision d\'une demande', async () => {
+    const fetch = vi.fn().mockImplementation(async () => jsonResponse(200, { data: { id: 3 } }))
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+
+    await api.techShares.list({ received: true, status: 'active' })
+    await api.techShares.markRead(3)
+    await api.accessRequests.decide(5, { decision: 'approved', share: { content: 'Code 12', expires_at: '2026-11-20T18:00:00+00:00' } })
+    await api.journals.send(7, { to: ['a@b.sn'], subject: 'Rapport', message: 'Bonjour' })
+
+    expect(fetch.mock.calls[0]?.[0]).toBe('https://api.test/api/v1/tech-shares?status=active&received=1')
+    expect(fetch.mock.calls[1]?.[0]).toBe('https://api.test/api/v1/tech-shares/3/read')
+    expect(fetch.mock.calls[2]?.[0]).toBe('https://api.test/api/v1/tech-access-requests/5/decide')
+    expect(JSON.parse(fetch.mock.calls[2]?.[1]?.body).share.content).toBe('Code 12')
+    expect(fetch.mock.calls[3]?.[0]).toBe('https://api.test/api/v1/journals/7/send')
+  })
+})

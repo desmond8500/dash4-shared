@@ -6,6 +6,13 @@ import type {
   QuoteEmailDraft,
   Journal,
   JournalFilters,
+  TechShare,
+  TechShareFilters,
+  TechSharePayload,
+  TechAccessRequest,
+  TechAccessRequestFilters,
+  TechAccessRequestPayload,
+  AccessRequestDecision,
   JournalPayload,
   ClientRequestLinkType,
   Priority,
@@ -362,6 +369,63 @@ export function createApiClient(options: ApiClientOptions) {
       /** Rapport d'intervention avec les photos. */
       pdf(id: number): Promise<Blob> {
         return requestBlob(`journals/${id}/pdf`)
+      },
+      /** Destinataires proposés (client et contacts), objet et message. */
+      async emailDraft(id: number): Promise<QuoteEmailDraft> {
+        return (await request<Wrapped<QuoteEmailDraft>>('GET', `journals/${id}/email-draft`)).data
+      },
+      /** Envoie le rapport par e-mail avec son PDF. */
+      async send(id: number, payload: QuoteEmailPayload): Promise<Journal> {
+        return (await request<Wrapped<Journal>>('POST', `journals/${id}/send`, payload)).data
+      },
+    },
+
+    /** Informations temporaires (`tech_shares.*`) : effacées à l'expiration. */
+    techShares: {
+      list(filters: TechShareFilters = {}): Promise<SyncPaginated<TechShare>> {
+        const { received, mine, ...rest } = filters
+        return request('GET', 'tech-shares', undefined, { ...rest, ...(received ? { received: 1 } : {}), ...(mine ? { mine: 1 } : {}) })
+      },
+      async get(id: number): Promise<TechShare> {
+        return (await request<Wrapped<TechShare>>('GET', `tech-shares/${id}`)).data
+      },
+      async create(payload: TechSharePayload & { title: string; recipients: number[] }): Promise<TechShare> {
+        return (await request<Wrapped<TechShare>>('POST', 'tech-shares', payload)).data
+      },
+      async update(id: number, payload: Omit<TechSharePayload, 'client_uuid'>): Promise<TechShare> {
+        return (await request<Wrapped<TechShare>>('PATCH', `tech-shares/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `tech-shares/${id}`)
+      },
+      /** Le destinataire indique l'avoir lue. */
+      async markRead(id: number): Promise<TechShare> {
+        return (await request<Wrapped<TechShare>>('POST', `tech-shares/${id}/read`)).data
+      },
+      /** Efface tout de suite le contenu et les fichiers. */
+      async expire(id: number): Promise<TechShare> {
+        return (await request<Wrapped<TechShare>>('POST', `tech-shares/${id}/expire`)).data
+      },
+    },
+
+    /** Demandes d'accès des techniciens (`tech_access_requests.*`). */
+    accessRequests: {
+      list(filters: TechAccessRequestFilters = {}): Promise<SyncPaginated<TechAccessRequest>> {
+        const { pending, mine, ...rest } = filters
+        return request('GET', 'tech-access-requests', undefined, { ...rest, ...(pending ? { pending: 1 } : {}), ...(mine ? { mine: 1 } : {}) })
+      },
+      async get(id: number): Promise<TechAccessRequest> {
+        return (await request<Wrapped<TechAccessRequest>>('GET', `tech-access-requests/${id}`)).data
+      },
+      async create(payload: TechAccessRequestPayload): Promise<TechAccessRequest> {
+        return (await request<Wrapped<TechAccessRequest>>('POST', 'tech-access-requests', payload)).data
+      },
+      /** Accepter (avec l'information à envoyer) ou refuser (avec la raison). */
+      async decide(id: number, payload: AccessRequestDecision): Promise<TechAccessRequest> {
+        return (await request<Wrapped<TechAccessRequest>>('POST', `tech-access-requests/${id}/decide`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `tech-access-requests/${id}`)
       },
     },
 

@@ -381,6 +381,9 @@ export interface AppNotification {
   title: string
   body: string
   client_request_id?: number
+  task_id?: number
+  tech_share_id?: number | null
+  tech_access_request_id?: number
   read_at: string | null
   created_at: string | null
 }
@@ -408,7 +411,7 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
 export const ACTIVE_PROJECT_STATUSES: ProjectStatus[] = ['planned', 'in_progress', 'on_hold']
 
 /** Fiches qui acceptent notes, liens et documents (segment de l'adresse de l'API). */
-export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals'
+export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'journal-sections' | 'tech-shares'
 
 export interface Note {
   id: number
@@ -1785,6 +1788,8 @@ export interface JournalSection {
   position?: number
   title: string
   body: string | null
+  /** Photos de la section (documents du type `journal-sections`). */
+  photos?: Document[]
 }
 
 export interface JournalParticipant {
@@ -1827,6 +1832,8 @@ export interface Journal {
   sections?: JournalSection[]
   participants?: JournalParticipant[]
   photos_count?: number
+  /** Envois du rapport par e-mail. */
+  emails?: QuoteEmailRecord[]
   creator?: UserRef | null
   created_by: number | null
   can: { update: boolean; delete: boolean }
@@ -1862,7 +1869,138 @@ export interface JournalPayload {
   summary?: string | null
   latitude?: number | null
   longitude?: number | null
-  /** Remplacent la liste. */
-  sections?: Array<{ title: string; body?: string | null }>
+  /**
+   * Remplacent la liste : une section avec son `id` est modifiée (ses photos restent),
+   * sans `id` elle est créée ; les sections absentes sont retirées avec leurs photos.
+   */
+  sections?: Array<{ id?: number; title: string; body?: string | null }>
   participants?: JournalParticipantPayload[]
+}
+
+// ---------------------------------------------------------------------------
+// Espace technicien : informations temporaires et demandes d'accès
+// ---------------------------------------------------------------------------
+
+export type TechShareCategory = 'info' | 'access' | 'equipment' | 'document'
+
+export const TECH_SHARE_CATEGORIES: Array<{ value: TechShareCategory; label: string }> = [
+  { value: 'info', label: 'Information' },
+  { value: 'access', label: 'Accès / codes' },
+  { value: 'equipment', label: 'Matériel' },
+  { value: 'document', label: 'Document' },
+]
+
+export interface TechShareRecipient {
+  id: number
+  full_name: string
+  read_at: string | null
+}
+
+/** Information temporaire : à l'expiration, `content` et `files` sont vides. */
+export interface TechShare {
+  id: number
+  client_uuid: string | null
+  category: Labelled<TechShareCategory>
+  title: string
+  content: string | null
+  project_id: number | null
+  project?: { id: number; name: string } | null
+  task_id: number | null
+  task?: { id: number; title: string; status: string } | null
+  expires_at: string | null
+  /** Expire quand la tâche est terminée ou annulée. */
+  expires_with_task: boolean
+  expired: boolean
+  expired_at: string | null
+  recipients?: TechShareRecipient[]
+  /** Je fais partie des destinataires. */
+  is_recipient: boolean
+  /** Ma lecture (si je suis destinataire). */
+  read_at: string | null
+  files?: Document[]
+  creator?: UserRef | null
+  created_by: number | null
+  can: { update: boolean; delete: boolean }
+  created_at: string | null
+  updated_at: string | null
+  deleted_at: string | null
+}
+
+export interface TechShareFilters extends SyncFilters {
+  status?: 'active' | 'expired'
+  received?: boolean
+  mine?: boolean
+  project_id?: number
+  task_id?: number
+  search?: string
+}
+
+export interface TechSharePayload {
+  client_uuid?: string
+  category?: TechShareCategory
+  title?: string
+  content?: string | null
+  project_id?: number | null
+  task_id?: number | null
+  /** Date et heure ISO 8601 (heure du serveur pour l'expiration). */
+  expires_at?: string | null
+  expires_with_task?: boolean
+  /** Remplacent la liste. */
+  recipients?: number[]
+}
+
+export type AccessRequestStatus = 'pending' | 'approved' | 'rejected'
+
+export const ACCESS_REQUEST_STATUSES: Array<{ value: AccessRequestStatus; label: string }> = [
+  { value: 'pending', label: 'En attente' },
+  { value: 'approved', label: 'Acceptée' },
+  { value: 'rejected', label: 'Refusée' },
+]
+
+export interface TechAccessRequest {
+  id: number
+  client_uuid: string | null
+  subject: string
+  reason: string | null
+  needed_on: string | null
+  status: Labelled<AccessRequestStatus>
+  user_id: number
+  user?: UserRef | null
+  project_id: number | null
+  project?: { id: number; name: string } | null
+  task_id: number | null
+  task?: { id: number; title: string } | null
+  response: string | null
+  decided_at: string | null
+  decider?: UserRef | null
+  /** Information envoyée en réponse. */
+  tech_share_id: number | null
+  can: { decide: boolean; delete: boolean }
+  created_at: string | null
+  updated_at: string | null
+  deleted_at: string | null
+}
+
+export interface TechAccessRequestFilters extends SyncFilters {
+  status?: AccessRequestStatus
+  pending?: boolean
+  mine?: boolean
+  project_id?: number
+}
+
+export interface TechAccessRequestPayload {
+  client_uuid?: string
+  subject: string
+  reason?: string | null
+  needed_on?: string | null
+  project_id?: number | null
+  task_id?: number | null
+}
+
+export interface AccessRequestDecision {
+  decision: 'approved' | 'rejected'
+  /** Obligatoire pour un refus. */
+  response?: string | null
+  /** Information envoyée au demandeur (accord). */
+  share?: { title?: string | null; content: string; category?: TechShareCategory; expires_at: string } | null
 }
