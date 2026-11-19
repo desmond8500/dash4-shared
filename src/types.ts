@@ -452,7 +452,7 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
 export const ACTIVE_PROJECT_STATUSES: ProjectStatus[] = ['planned', 'in_progress', 'on_hold']
 
 /** Fiches qui acceptent notes, liens et documents (segment de l'adresse de l'API). */
-export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'journal-sections' | 'tech-shares' | 'comments' | 'buildings' | 'installed-systems' | 'equipment' | 'reception-reports'
+export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'journal-sections' | 'tech-shares' | 'comments' | 'buildings' | 'installed-systems' | 'equipment' | 'reception-reports' | 'sheets'
 
 export interface Note {
   id: number
@@ -2231,4 +2231,120 @@ export interface ReceptionReportPayload {
   reserves?: Reserve[]
   /** Systèmes réceptionnés ; à la création, tous par défaut. */
   system_ids?: number[]
+}
+
+// --- Plans, quantitatifs, fiches -------------------------------------------------------
+
+export interface PlanMarker {
+  id: number
+  client_uuid: string | null
+  equipment_id: number | null
+  page: number
+  /** Position relative, de 0 (gauche / haut) à 1 (droite / bas). */
+  x: number
+  y: number
+  label: string | null
+  color: string | null
+}
+
+export interface Plan {
+  id: number
+  project_id: number
+  building_id: number | null
+  level_id: number | null
+  name: string
+  kind: 'image' | 'pdf'
+  mime: string
+  size: number
+  position: number
+  /** Fichier privé : à télécharger avec le jeton (`api.plans.file`). */
+  download_path: string
+  markers?: PlanMarker[]
+  updated_at: string | null
+}
+
+export interface PlanMarkerPayload {
+  client_uuid?: string
+  x?: number
+  y?: number
+  page?: number
+  equipment_id?: number | null
+  label?: string | null
+  color?: string | null
+}
+
+export interface QuantityRow {
+  id?: number
+  article_id: number | null
+  article?: { id: number; designation: string; reference: string | null } | null
+  designation: string
+  unit: string | null
+  quantity: number
+  level_id: number | null
+  room_id: number | null
+  description: string | null
+  position?: number
+}
+
+export interface Quantity {
+  id: number
+  project_id: number
+  building_id: number | null
+  installed_system_id: number | null
+  name: string
+  description: string | null
+  /** Devis créé à partir du quantitatif (seulement pour qui voit les devis). */
+  quote?: { id: number; number: string | null; title: string } | null
+  rows?: QuantityRow[]
+  updated_at: string | null
+}
+
+export interface QuantityPayload {
+  name?: string
+  description?: string | null
+  building_id?: number | null
+  installed_system_id?: number | null
+  /** Remplacent la liste. */
+  rows?: Array<Pick<QuantityRow, 'article_id' | 'designation' | 'unit' | 'quantity' | 'level_id' | 'room_id' | 'description'>>
+}
+
+export interface SheetZone {
+  id?: number
+  position?: number
+  number: string
+  name: string
+  code: string | null
+  equipment_label: string | null
+  equipment_id: number | null
+  room_id: number | null
+}
+
+export interface Sheet {
+  id: number
+  project_id: number
+  building_id: number | null
+  installed_system_id: number | null
+  title: string
+  type: string | null
+  date: string | null
+  contact_name: string | null
+  contact_phone: string | null
+  contact_email: string | null
+  notes: string | null
+  zones?: SheetZone[]
+  updated_at: string | null
+}
+
+export interface SheetPayload {
+  title?: string
+  type?: string | null
+  date?: string | null
+  building_id?: number | null
+  installed_system_id?: number | null
+  contact_name?: string | null
+  contact_phone?: string | null
+  contact_email?: string | null
+  notes?: string | null
+  /** Remplacent la liste. */
+  zones?: Array<Omit<SheetZone, 'id' | 'position'>>
 }

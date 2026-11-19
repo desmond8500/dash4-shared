@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { equipmentTotals, equipmentTree, placeLabel } from '../src'
+import { equipmentTotals, equipmentTree, placeLabel, quantityTotals, relativePosition } from '../src'
 import type { Equipment } from '../src'
 
 const eq = (id: number, parent_id: number | null, patch: Partial<Equipment> = {}) =>
@@ -22,5 +22,19 @@ describe('suivi de chantier', () => {
   it('compte les équipements par type', () => {
     expect(equipmentTotals([eq(1, null, { type: 'Caméra', quantity: 8 }), eq(2, null, { type: 'Caméra', quantity: 4 }), eq(3, null, { name: 'NVR' })]))
       .toEqual([{ label: 'Caméra', quantity: 12 }, { label: 'NVR', quantity: 1 }])
+  })
+})
+
+describe('plans et quantitatifs', () => {
+  it('calcule la position relative d\'un marqueur', () => {
+    expect(relativePosition(150, 75, { left: 100, top: 50, width: 200, height: 100 })).toEqual({ x: 0.25, y: 0.25 })
+    expect(relativePosition(500, 0, { left: 100, top: 50, width: 200, height: 100 })).toEqual({ x: 1, y: 0 })
+  })
+  it('additionne les lignes d\'un même article', () => {
+    expect(quantityTotals([
+      { article_id: 1, designation: 'Détecteur', unit: null, quantity: 4 },
+      { article_id: 1, designation: 'Détecteur', unit: null, quantity: 2 },
+      { article_id: null, designation: 'Câble', unit: 'm', quantity: 12.5 },
+    ])).toEqual([{ designation: 'Détecteur', unit: null, quantity: 6 }, { designation: 'Câble', unit: 'm', quantity: 12.5 }])
   })
 })

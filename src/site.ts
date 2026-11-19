@@ -41,3 +41,25 @@ export function equipmentTotals(items: Equipment[]): Array<{ label: string; quan
   }
   return [...totals.entries()].map(([label, quantity]) => ({ label, quantity })).sort((a, b) => b.quantity - a.quantity || a.label.localeCompare(b.label, 'fr'))
 }
+
+/** Position relative (0 à 1) d'un clic dans un élément, arrondie à 6 décimales. */
+export function relativePosition(clientX: number, clientY: number, rect: { left: number; top: number; width: number; height: number }): { x: number; y: number } {
+  const clamp = (v: number) => Math.min(1, Math.max(0, v))
+  const round = (v: number) => Math.round(v * 1e6) / 1e6
+  return {
+    x: round(clamp((clientX - rect.left) / (rect.width || 1))),
+    y: round(clamp((clientY - rect.top) / (rect.height || 1))),
+  }
+}
+
+/** Total par article ou désignation d'un quantitatif (lignes de plusieurs pièces additionnées). */
+export function quantityTotals(rows: Array<{ article_id: number | null; designation: string; unit: string | null; quantity: number }>): Array<{ designation: string; unit: string | null; quantity: number }> {
+  const totals = new Map<string, { designation: string; unit: string | null; quantity: number }>()
+  for (const r of rows) {
+    const key = r.article_id ? `a${r.article_id}` : `d${r.designation.trim().toLowerCase()}`
+    const t = totals.get(key) ?? { designation: r.designation, unit: r.unit, quantity: 0 }
+    t.quantity = Math.round((t.quantity + Number(r.quantity || 0)) * 100) / 100
+    totals.set(key, t)
+  }
+  return [...totals.values()]
+}

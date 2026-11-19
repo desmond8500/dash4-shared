@@ -13,6 +13,12 @@ import type {
   InstalledSystemPayload,
   EquipmentPayload,
   ReceptionReport,
+  Plan,
+  PlanMarkerPayload,
+  Quantity,
+  QuantityPayload,
+  Sheet,
+  SheetPayload,
   ReceptionReportPayload,
   ReceptionParty,
   Comment,
@@ -462,6 +468,83 @@ export function createApiClient(options: ApiClientOptions) {
       async removeCatalogSystem(id: number): Promise<void> {
         await request('DELETE', `systems/${id}`)
       },
+    },
+
+    /** Plans d'un chantier (image ou PDF) et marqueurs d'équipements. */
+    plans: {
+      async list(projectId: number): Promise<Plan[]> {
+        return (await request<Wrapped<Plan[]>>('GET', `projects/${projectId}/plans`)).data
+      },
+      /** PDF ou image (30 Mo) ; un DWG est refusé : l'exporter en PDF avant. */
+      async upload(projectId: number, file: Blob, filename: string, extra: { name?: string; building_id?: number | null; level_id?: number | null } = {}): Promise<Plan> {
+        const form = new FormData()
+        form.append('file', file, filename)
+        if (extra.name) form.append('name', extra.name)
+        if (extra.building_id) form.append('building_id', String(extra.building_id))
+        if (extra.level_id) form.append('level_id', String(extra.level_id))
+        return (await request<Wrapped<Plan>>('POST', `projects/${projectId}/plans`, form)).data
+      },
+      async update(id: number, payload: { name?: string; building_id?: number | null; level_id?: number | null; position?: number }): Promise<Plan> {
+        return (await request<Wrapped<Plan>>('PATCH', `plans/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `plans/${id}`)
+      },
+      file(plan: Pick<Plan, 'download_path'>): Promise<Blob> {
+        return requestBlob(plan.download_path)
+      },
+      async addMarker(planId: number, payload: PlanMarkerPayload & { x: number; y: number }): Promise<Plan> {
+        return (await request<Wrapped<Plan>>('POST', `plans/${planId}/markers`, payload)).data
+      },
+      async updateMarker(id: number, payload: PlanMarkerPayload): Promise<Plan> {
+        return (await request<Wrapped<Plan>>('PATCH', `plan-markers/${id}`, payload)).data
+      },
+      async removeMarker(id: number): Promise<Plan> {
+        return (await request<Wrapped<Plan>>('DELETE', `plan-markers/${id}`)).data
+      },
+    },
+
+    /** Quantitatifs d'un chantier ; `toQuote` en fait un devis brouillon. */
+    quantities: {
+      async list(projectId: number): Promise<Quantity[]> {
+        return (await request<Wrapped<Quantity[]>>('GET', `projects/${projectId}/quantities`)).data
+      },
+      async create(projectId: number, payload: QuantityPayload & { name: string }): Promise<Quantity> {
+        return (await request<Wrapped<Quantity>>('POST', `projects/${projectId}/quantities`, payload)).data
+      },
+      async update(id: number, payload: QuantityPayload): Promise<Quantity> {
+        return (await request<Wrapped<Quantity>>('PATCH', `quantities/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `quantities/${id}`)
+      },
+      async toQuote(id: number): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('POST', `quantities/${id}/quote`)).data
+      },
+    },
+
+    /** Fiches techniques (zones) d'un chantier. */
+    sheets: {
+      async list(projectId: number): Promise<Sheet[]> {
+        return (await request<Wrapped<Sheet[]>>('GET', `projects/${projectId}/sheets`)).data
+      },
+      async create(projectId: number, payload: SheetPayload & { title: string }): Promise<Sheet> {
+        return (await request<Wrapped<Sheet>>('POST', `projects/${projectId}/sheets`, payload)).data
+      },
+      async update(id: number, payload: SheetPayload): Promise<Sheet> {
+        return (await request<Wrapped<Sheet>>('PATCH', `sheets/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `sheets/${id}`)
+      },
+      pdf(id: number): Promise<Blob> {
+        return requestBlob(`sheets/${id}/pdf`)
+      },
+    },
+
+    /** Dossier des ouvrages exécutés du projet, en PDF. */
+    doe(projectId: number): Promise<Blob> {
+      return requestBlob(`projects/${projectId}/doe`)
     },
 
     /** Procès-verbaux de réception d'un chantier. */
