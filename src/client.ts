@@ -7,6 +7,14 @@ import type {
   Journal,
   JournalFilters,
   TechShare,
+  Site,
+  SiteSystem,
+  PlacePayload,
+  InstalledSystemPayload,
+  EquipmentPayload,
+  ReceptionReport,
+  ReceptionReportPayload,
+  ReceptionParty,
   Comment,
   CommentPayload,
   CommentableType,
@@ -381,6 +389,108 @@ export function createApiClient(options: ApiClientOptions) {
       /** Envoie le rapport par e-mail avec son PDF. */
       async send(id: number, payload: QuoteEmailPayload): Promise<Journal> {
         return (await request<Wrapped<Journal>>('POST', `journals/${id}/send`, payload)).data
+      },
+    },
+
+    /** Suivi de chantier d'un projet (`sites.*`) ; chaque modification renvoie le chantier complet. */
+    sites: {
+      async get(projectId: number): Promise<Site> {
+        return (await request<Wrapped<Site>>('GET', `projects/${projectId}/site`)).data
+      },
+      async addBuilding(projectId: number, payload: PlacePayload & { name: string }): Promise<Site> {
+        return (await request<Wrapped<Site>>('POST', `projects/${projectId}/buildings`, payload)).data
+      },
+      async updateBuilding(id: number, payload: PlacePayload): Promise<Site> {
+        return (await request<Wrapped<Site>>('PATCH', `buildings/${id}`, payload)).data
+      },
+      async removeBuilding(id: number): Promise<Site> {
+        return (await request<Wrapped<Site>>('DELETE', `buildings/${id}`)).data
+      },
+      async addLevel(buildingId: number, payload: PlacePayload & { name: string }): Promise<Site> {
+        return (await request<Wrapped<Site>>('POST', `buildings/${buildingId}/levels`, payload)).data
+      },
+      async updateLevel(id: number, payload: PlacePayload): Promise<Site> {
+        return (await request<Wrapped<Site>>('PATCH', `levels/${id}`, payload)).data
+      },
+      async removeLevel(id: number): Promise<Site> {
+        return (await request<Wrapped<Site>>('DELETE', `levels/${id}`)).data
+      },
+      async addRoom(levelId: number, payload: PlacePayload & { name: string }): Promise<Site> {
+        return (await request<Wrapped<Site>>('POST', `levels/${levelId}/rooms`, payload)).data
+      },
+      async updateRoom(id: number, payload: PlacePayload): Promise<Site> {
+        return (await request<Wrapped<Site>>('PATCH', `rooms/${id}`, payload)).data
+      },
+      async removeRoom(id: number): Promise<Site> {
+        return (await request<Wrapped<Site>>('DELETE', `rooms/${id}`)).data
+      },
+      async addSystem(projectId: number, payload: InstalledSystemPayload): Promise<Site> {
+        return (await request<Wrapped<Site>>('POST', `projects/${projectId}/installed-systems`, payload)).data
+      },
+      async updateSystem(id: number, payload: InstalledSystemPayload): Promise<Site> {
+        return (await request<Wrapped<Site>>('PATCH', `installed-systems/${id}`, payload)).data
+      },
+      async removeSystem(id: number): Promise<Site> {
+        return (await request<Wrapped<Site>>('DELETE', `installed-systems/${id}`)).data
+      },
+      /** Relevé d'avancement : le système prend le pourcentage du relevé le plus récent. */
+      async addProgress(systemId: number, payload: { percent: number; date?: string; note?: string | null; client_uuid?: string }): Promise<Site> {
+        return (await request<Wrapped<Site>>('POST', `installed-systems/${systemId}/progress`, payload)).data
+      },
+      async removeProgress(id: number): Promise<Site> {
+        return (await request<Wrapped<Site>>('DELETE', `system-progress/${id}`)).data
+      },
+      async addEquipment(systemId: number, payload: EquipmentPayload): Promise<Site> {
+        return (await request<Wrapped<Site>>('POST', `installed-systems/${systemId}/equipment`, payload)).data
+      },
+      async updateEquipment(id: number, payload: EquipmentPayload): Promise<Site> {
+        return (await request<Wrapped<Site>>('PATCH', `equipment/${id}`, payload)).data
+      },
+      async removeEquipment(id: number): Promise<Site> {
+        return (await request<Wrapped<Site>>('DELETE', `equipment/${id}`)).data
+      },
+      /** Catalogue des systèmes (vidéosurveillance, alarme…). */
+      async catalog(): Promise<SiteSystem[]> {
+        return (await request<Wrapped<SiteSystem[]>>('GET', 'systems')).data
+      },
+      async addCatalogSystem(payload: { name: string; icon?: string | null; description?: string | null }): Promise<SiteSystem> {
+        return (await request<Wrapped<SiteSystem>>('POST', 'systems', payload)).data
+      },
+      async updateCatalogSystem(id: number, payload: { name?: string; icon?: string | null; description?: string | null }): Promise<SiteSystem> {
+        return (await request<Wrapped<SiteSystem>>('PATCH', `systems/${id}`, payload)).data
+      },
+      async removeCatalogSystem(id: number): Promise<void> {
+        await request('DELETE', `systems/${id}`)
+      },
+    },
+
+    /** Procès-verbaux de réception d'un chantier. */
+    receptionReports: {
+      async list(projectId: number): Promise<ReceptionReport[]> {
+        return (await request<Wrapped<ReceptionReport[]>>('GET', `projects/${projectId}/reception-reports`)).data
+      },
+      async get(id: number): Promise<ReceptionReport> {
+        return (await request<Wrapped<ReceptionReport>>('GET', `reception-reports/${id}`)).data
+      },
+      async create(projectId: number, payload: ReceptionReportPayload & { title: string; date: string }): Promise<ReceptionReport> {
+        return (await request<Wrapped<ReceptionReport>>('POST', `projects/${projectId}/reception-reports`, payload)).data
+      },
+      async update(id: number, payload: ReceptionReportPayload): Promise<ReceptionReport> {
+        return (await request<Wrapped<ReceptionReport>>('PATCH', `reception-reports/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `reception-reports/${id}`)
+      },
+      async uploadLogo(id: number, party: ReceptionParty, file: Blob, filename: string): Promise<ReceptionReport> {
+        const form = new FormData()
+        form.append('logo', file, filename)
+        return (await request<Wrapped<ReceptionReport>>('POST', `reception-reports/${id}/logos/${party}`, form)).data
+      },
+      async removeLogo(id: number, party: ReceptionParty): Promise<ReceptionReport> {
+        return (await request<Wrapped<ReceptionReport>>('DELETE', `reception-reports/${id}/logos/${party}`)).data
+      },
+      pdf(id: number): Promise<Blob> {
+        return requestBlob(`reception-reports/${id}/pdf`)
       },
     },
 

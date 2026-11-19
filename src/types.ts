@@ -379,7 +379,7 @@ export interface Assignee {
 // ---------------------------------------------------------------------------
 
 /** Fiches qui ont un fil de commentaires. */
-export type CommentableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'tech-shares'
+export type CommentableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'tech-shares' | 'installed-systems' | 'equipment' | 'reception-reports'
 
 export interface Comment {
   id: number
@@ -452,7 +452,7 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
 export const ACTIVE_PROJECT_STATUSES: ProjectStatus[] = ['planned', 'in_progress', 'on_hold']
 
 /** Fiches qui acceptent notes, liens et documents (segment de l'adresse de l'API). */
-export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'journal-sections' | 'tech-shares' | 'comments'
+export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'journal-sections' | 'tech-shares' | 'comments' | 'buildings' | 'installed-systems' | 'equipment' | 'reception-reports'
 
 export interface Note {
   id: number
@@ -2044,4 +2044,191 @@ export interface AccessRequestDecision {
   response?: string | null
   /** Information envoyée au demandeur (accord). */
   share?: { title?: string | null; content: string; category?: TechShareCategory; expires_at: string } | null
+}
+
+// ---------------------------------------------------------------------------
+// Suivi de chantier : bâtiments, systèmes installés, équipements, avancement, PV
+// ---------------------------------------------------------------------------
+
+export interface SiteRoom {
+  id: number
+  name: string
+  description: string | null
+  position: number
+}
+
+export interface SiteLevel extends SiteRoom {
+  rooms: SiteRoom[]
+}
+
+export interface SiteBuilding extends SiteRoom {
+  levels: SiteLevel[]
+}
+
+export type EquipmentStatus = 'planned' | 'installed' | 'commissioned' | 'faulty' | 'removed'
+
+export const EQUIPMENT_STATUSES: Array<{ value: EquipmentStatus; label: string }> = [
+  { value: 'planned', label: 'Prévu' },
+  { value: 'installed', label: 'Posé' },
+  { value: 'commissioned', label: 'Mis en service' },
+  { value: 'faulty', label: 'En panne' },
+  { value: 'removed', label: 'Déposé' },
+]
+
+export interface Characteristic {
+  label: string
+  value: string
+}
+
+/** Équipement : l'article lié est donné sans aucun prix. */
+export interface Equipment {
+  id: number
+  client_uuid: string | null
+  installed_system_id: number
+  /** Équipement secondaire (disque d'un enregistreur…). */
+  parent_id: number | null
+  name: string
+  type: string | null
+  model: string | null
+  serial_number: string | null
+  quantity: number
+  status: Labelled<EquipmentStatus>
+  characteristics: Characteristic[]
+  description: string | null
+  position: number
+  article_id: number | null
+  article?: { id: number; designation: string; reference: string | null } | null
+  level_id: number | null
+  room_id: number | null
+  updated_at: string | null
+}
+
+export interface EquipmentPayload {
+  client_uuid?: string
+  installed_system_id?: number
+  parent_id?: number | null
+  article_id?: number | null
+  level_id?: number | null
+  room_id?: number | null
+  name?: string | null
+  type?: string | null
+  model?: string | null
+  serial_number?: string | null
+  quantity?: number
+  status?: EquipmentStatus
+  characteristics?: Characteristic[]
+  description?: string | null
+  position?: number
+}
+
+export interface ProgressEntry {
+  id: number
+  date: string | null
+  percent: number
+  note: string | null
+  creator: UserRef | null
+}
+
+export interface InstalledSystem {
+  id: number
+  project_id: number
+  building_id: number | null
+  system_id: number | null
+  system?: { id: number; name: string; icon: string | null } | null
+  name: string
+  description: string | null
+  position: number
+  /** Pourcentage du relevé le plus récent. */
+  progress: number
+  progress_entries?: ProgressEntry[]
+  equipment?: Equipment[]
+  updated_at: string | null
+}
+
+export interface InstalledSystemPayload {
+  system_id?: number | null
+  building_id?: number | null
+  name?: string | null
+  description?: string | null
+  position?: number
+}
+
+/** Chantier complet d'un projet. */
+export interface Site {
+  project: { id: number; name: string }
+  buildings: SiteBuilding[]
+  systems: InstalledSystem[]
+  /** Moyenne des systèmes. */
+  progress: number
+  equipment_count: number
+  reception_reports_count: number
+  can: { manage: boolean; create: boolean; delete: boolean }
+  updated_at: string | null
+}
+
+export interface SiteSystem {
+  id: number
+  name: string
+  icon: string | null
+  description: string | null
+}
+
+export interface PlacePayload {
+  name?: string
+  description?: string | null
+  position?: number
+}
+
+export type ReceptionStatus = 'draft' | 'with_reserves' | 'accepted' | 'signed'
+
+export const RECEPTION_STATUSES: Array<{ value: ReceptionStatus; label: string }> = [
+  { value: 'draft', label: 'Brouillon' },
+  { value: 'with_reserves', label: 'Réception avec réserves' },
+  { value: 'accepted', label: 'Réception sans réserve' },
+  { value: 'signed', label: 'Signé' },
+]
+
+export type ReceptionParty = 'client' | 'owner' | 'engineer' | 'inspector'
+
+export interface Reserve {
+  text: string
+  lifted_at: string | null
+}
+
+export interface ReceptionReport {
+  id: number
+  project_id: number
+  project?: { id: number; name: string }
+  quote_id: number | null
+  quote?: { id: number; number: string | null; title: string } | null
+  title: string
+  subtitle: string | null
+  date: string | null
+  status: Labelled<ReceptionStatus>
+  location: string | null
+  parties: Array<{ key: ReceptionParty; label: string; name: string | null; logo_url: string | null }>
+  observations: string | null
+  reserves: Reserve[]
+  systems?: Array<{ id: number; name: string; progress: number }>
+  creator?: UserRef | null
+  can: { update: boolean; delete: boolean }
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface ReceptionReportPayload {
+  title?: string
+  subtitle?: string | null
+  date?: string
+  status?: ReceptionStatus
+  location?: string | null
+  quote_id?: number | null
+  client_name?: string | null
+  owner_name?: string | null
+  engineer_name?: string | null
+  inspector_name?: string | null
+  observations?: string | null
+  reserves?: Reserve[]
+  /** Systèmes réceptionnés ; à la création, tous par défaut. */
+  system_ids?: number[]
 }
