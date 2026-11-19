@@ -134,6 +134,10 @@ import type {
   UserFilters,
   UserPayload,
   Wrapped,
+  Cv,
+  CvPayload,
+  ProfilePayload,
+  PasswordPayload,
 } from './types.js'
 
 /** Où stocker le jeton : localStorage sur le web, stockage sécurisé sur mobile. */
@@ -564,6 +568,60 @@ export function createApiClient(options: ApiClientOptions) {
       },
       async saveLayout(layout: DashboardLayout): Promise<DashboardData> {
         return (await request<Wrapped<DashboardData>>('PUT', 'dashboard/layout', layout)).data
+      },
+    },
+
+    /** Espace personnel : son profil, sa photo, son mot de passe (aucune permission requise). */
+    profile: {
+      async update(payload: ProfilePayload): Promise<CurrentUser> {
+        return (await request<Wrapped<CurrentUser>>('PATCH', 'me', payload)).data
+      },
+      async uploadAvatar(file: Blob, filename = 'photo'): Promise<CurrentUser> {
+        const form = new FormData()
+        form.append('logo', file, filename)
+        return (await request<Wrapped<CurrentUser>>('POST', 'me/avatar', form)).data
+      },
+      /** Ferme aussi les sessions des autres appareils. */
+      async changePassword(payload: PasswordPayload): Promise<string> {
+        return (await request<{ message: string }>('PUT', 'me/password', payload)).message
+      },
+    },
+
+    /** CV de l'utilisateur connecté ; les administrateurs voient ceux qui leur sont partagés. */
+    cvs: {
+      async mine(): Promise<Cv[]> {
+        return (await request<Wrapped<Cv[]>>('GET', 'me/cvs')).data
+      },
+      async ofUser(userId: number): Promise<Cv[]> {
+        return (await request<Wrapped<Cv[]>>('GET', `users/${userId}/cvs`)).data
+      },
+      async get(id: number): Promise<Cv> {
+        return (await request<Wrapped<Cv>>('GET', `cvs/${id}`)).data
+      },
+      /** Prérempli avec le profil et les sections habituelles. */
+      async create(payload: CvPayload & { name: string }): Promise<Cv> {
+        return (await request<Wrapped<Cv>>('POST', 'me/cvs', payload)).data
+      },
+      async update(id: number, payload: CvPayload): Promise<Cv> {
+        return (await request<Wrapped<Cv>>('PATCH', `cvs/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `cvs/${id}`)
+      },
+      async duplicate(id: number): Promise<Cv> {
+        return (await request<Wrapped<Cv>>('POST', `cvs/${id}/duplicate`)).data
+      },
+      async uploadPhoto(id: number, file: Blob, filename = 'photo'): Promise<Cv> {
+        const form = new FormData()
+        form.append('logo', file, filename)
+        return (await request<Wrapped<Cv>>('POST', `cvs/${id}/photo`, form)).data
+      },
+      /** Ajoute les projets Dash4 de l'auteur à la section « Projets réalisés ». */
+      async importProjects(id: number): Promise<Cv> {
+        return (await request<Wrapped<Cv>>('POST', `cvs/${id}/projects`)).data
+      },
+      pdf(id: number): Promise<Blob> {
+        return requestBlob(`cvs/${id}/pdf`)
       },
     },
 

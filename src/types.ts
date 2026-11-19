@@ -32,6 +32,8 @@ export interface User {
   email: string
   phone: string | null
   job_title: string | null
+  /** Photo de profil (espace personnel). */
+  avatar_url?: string | null
   account_type: LabelledValue<AccountType>
   is_active: boolean
   roles: RoleRef[]
@@ -2552,4 +2554,84 @@ export interface DashboardLayout {
 export interface DashboardData {
   layout: DashboardLayout
   widgets: DashboardWidgets
+}
+
+// ─── Espace personnel : profil et CV ───────────────────────────────────────────
+
+export interface ProfilePayload {
+  firstname?: string
+  lastname?: string
+  phone?: string | null
+  job_title?: string | null
+}
+
+export interface PasswordPayload {
+  current_password: string
+  password: string
+  password_confirmation: string
+}
+
+export type CvSectionType = 'experience' | 'education' | 'skills' | 'certifications' | 'languages' | 'projects' | 'free'
+
+export const CV_SECTION_TYPES: { value: CvSectionType; label: string }[] = [
+  { value: 'experience', label: 'Expériences' },
+  { value: 'education', label: 'Formations' },
+  { value: 'skills', label: 'Compétences' },
+  { value: 'certifications', label: 'Certifications' },
+  { value: 'languages', label: 'Langues' },
+  { value: 'projects', label: 'Projets réalisés' },
+  { value: 'free', label: 'Autre' },
+]
+
+export interface CvItem {
+  id?: number
+  title: string
+  subtitle: string | null
+  place: string | null
+  /** Dates libres : « 2020 », « 03/2021 »… */
+  start_date: string | null
+  end_date: string | null
+  current: boolean
+  description: string | null
+  /** Niveau 1 à 5 (compétences, langues). */
+  level: number | null
+}
+
+export interface CvSection {
+  id?: number
+  name: string
+  type: CvSectionType
+  type_label?: string
+  items: CvItem[]
+}
+
+export type CvFont = 'sans' | 'serif' | 'mono'
+export type CvLayout = 'one_column' | 'two_columns'
+
+export interface Cv {
+  id: number
+  user_id: number
+  name: string
+  title: string | null
+  fullname: string | null
+  summary: string | null
+  photo_url: string | null
+  phone: string | null
+  email: string | null
+  address: string | null
+  website: string | null
+  accent_color: string
+  font: CvFont
+  layout: CvLayout
+  show_photo: boolean
+  /** Partagé avec les administrateurs. */
+  shared: boolean
+  sections: CvSection[]
+  can: { update: boolean }
+  updated_at: string | null
+}
+
+export type CvPayload = Partial<Omit<Cv, 'id' | 'user_id' | 'photo_url' | 'can' | 'updated_at' | 'sections'>> & {
+  /** Envoyées : remplacent tout le contenu du CV. */
+  sections?: CvSection[]
 }
