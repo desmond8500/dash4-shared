@@ -301,6 +301,17 @@ describe('client API', () => {
     expect(JSON.parse(fetch.mock.calls[3]?.[1]?.body)).toEqual({ lines: [{ id: 1, quantity: 4 }] })
   })
 
+  it('cherche les tâches de la semaine et coche une sous-tâche', async () => {
+    const fetch = vi.fn().mockImplementation(async () => jsonResponse(200, { data: { id: 1 } }))
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+
+    await api.tasks.list({ from: '2026-11-23', to: '2026-11-29', assigned_to: 'me', open: true, unscheduled: false })
+    await api.tasks.updateSubtask(7, { is_done: true })
+
+    expect(fetch.mock.calls[0]?.[0]).toBe('https://api.test/api/v1/tasks?from=2026-11-23&to=2026-11-29&assigned_to=me&open=1')
+    expect(fetch.mock.calls[1]?.[0]).toBe('https://api.test/api/v1/subtasks/7')
+  })
+
   it('envoie une dépense avec son justificatif en multipart, et le refus avec son motif', async () => {
     const fetch = vi.fn().mockImplementation(async () => jsonResponse(200, { data: { id: 2 } }))
     const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })

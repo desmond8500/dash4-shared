@@ -402,7 +402,7 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
 export const ACTIVE_PROJECT_STATUSES: ProjectStatus[] = ['planned', 'in_progress', 'on_hold']
 
 /** Fiches qui acceptent notes, liens et documents (segment de l'adresse de l'API). */
-export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses'
+export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks'
 
 export interface Note {
   id: number
@@ -1585,4 +1585,109 @@ export interface AccountingFilters {
   from?: string
   to?: string
   project_id?: number
+}
+
+// ---------------------------------------------------------------------------
+// Tâches et planning (`tasks.*`)
+// ---------------------------------------------------------------------------
+
+export type TaskStatus = 'todo' | 'in_progress' | 'blocked' | 'done' | 'cancelled'
+
+export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
+  todo: 'À faire',
+  in_progress: 'En cours',
+  blocked: 'Bloquée',
+  done: 'Terminée',
+  cancelled: 'Annulée',
+}
+
+export const OPEN_TASK_STATUSES: TaskStatus[] = ['todo', 'in_progress', 'blocked']
+
+export interface Subtask {
+  id: number
+  position: number
+  title: string
+  is_done: boolean
+}
+
+export interface Task {
+  id: number
+  client_uuid: string | null
+  title: string
+  description: string | null
+  status: Labelled<TaskStatus>
+  priority: Labelled<Priority>
+  project_id: number | null
+  project?: { id: number; name: string; address: string | null; latitude: number | null; longitude: number | null } | null
+  client_id: number | null
+  client?: { id: number; name: string; address: string | null } | null
+  /** Jamais envoyé à un technicien. */
+  quote_id: number | null
+  quote?: { id: number; number: string } | null
+  client_request_id: number | null
+  location: string | null
+  /** Heure locale, sans fuseau : « 2026-11-23T08:30:00 ». */
+  starts_at: string | null
+  ends_at: string | null
+  due_date: string | null
+  is_overdue: boolean
+  assignees?: UserRef[]
+  subtasks: Subtask[]
+  subtasks_done: number
+  subtasks_count: number
+  completed_at: string | null
+  completer?: UserRef | null
+  creator?: UserRef | null
+  created_by: number | null
+  /** `progress` : statut, sous-tâches, notes et photos (personnes affectées comprises). */
+  can: { update: boolean; progress: boolean; assign: boolean; delete: boolean }
+  created_at: string | null
+  updated_at: string | null
+  deleted_at: string | null
+}
+
+export interface TaskFilters extends SyncFilters {
+  status?: string
+  open?: boolean
+  /** Identifiant, ou « me ». */
+  assigned_to?: number | 'me'
+  project_id?: number
+  client_id?: number
+  quote_id?: number
+  priority?: Priority
+  overdue?: boolean
+  /** Avec `to` : créneau au planning qui chevauche la période. */
+  from?: string
+  to?: string
+  unscheduled?: boolean
+  search?: string
+}
+
+export interface TaskPayload {
+  client_uuid?: string
+  title?: string
+  description?: string | null
+  status?: TaskStatus
+  priority?: Priority
+  project_id?: number | null
+  client_id?: number | null
+  quote_id?: number | null
+  client_request_id?: number | null
+  location?: string | null
+  /** « AAAA-MM-JJ HH:MM », heure locale. */
+  starts_at?: string | null
+  ends_at?: string | null
+  due_date?: string | null
+  /** `tasks.assign`. */
+  assignee_ids?: number[]
+  /** À la création seulement. */
+  subtasks?: string[]
+}
+
+export interface TaskSummary {
+  mine_open: number
+  mine_today: number
+  mine_overdue: number
+  overdue: number
+  unassigned: number
 }

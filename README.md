@@ -63,3 +63,9 @@ lignes, `order`, `cancel`, `receive`, `pdf`). Bordereaux : `api.quotes.releaseDe
 `api.expenses` (`create` avec justificatif facultatif, `approve`, `reject`, `reimburse`, `uploadReceipt`, `summary`),
 `api.expenseCategories`, `api.expenseSpaces` (caisses : membres, `fund`, solde), `api.transactions`,
 `api.accounting.summary` / `ledger` (bilan : factures encaissées, dépenses validées, achats reçus, transactions).
+
+### Tâches (0.13.0)
+
+`api.tasks` : `list` (planning : `from` + `to` ; `open`, `overdue`, `unscheduled`, `assigned_to: 'me'`…), `summary`,
+`create` (avec `assignee_ids`, `subtasks`), `update` (`status` seul : personnes affectées), sous-tâches.
+`api.clientRequests.convert(id, { type: 'task' })`.

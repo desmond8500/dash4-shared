@@ -4,6 +4,10 @@ import type {
   DeliveryNotePayload,
   QuoteDepositPayload,
   QuoteEmailDraft,
+  Task,
+  TaskFilters,
+  TaskPayload,
+  TaskSummary,
   AccountingFilters,
   AccountingSummary,
   Expense,
@@ -317,10 +321,10 @@ export function createApiClient(options: ApiClientOptions) {
        */
       async convert(
         id: number,
-        payload: { type: 'project' | 'quote'; name?: string; client_id?: number; manager_id?: number | null },
-      ): Promise<{ request: ClientRequest; project?: Project; quote?: Quote }> {
+        payload: { type: 'project' | 'quote' | 'task'; name?: string; client_id?: number; manager_id?: number | null },
+      ): Promise<{ request: ClientRequest; project?: Project; quote?: Quote; task?: Task }> {
         return (
-          await request<Wrapped<{ request: ClientRequest; project?: Project; quote?: Quote }>>(
+          await request<Wrapped<{ request: ClientRequest; project?: Project; quote?: Quote; task?: Task }>>(
             'POST',
             `client-requests/${id}/convert`,
             payload,
@@ -725,6 +729,43 @@ export function createApiClient(options: ApiClientOptions) {
       /** Bon de commande (`costs.view`). */
       pdf(id: number): Promise<Blob> {
         return requestBlob(`purchases/${id}/pdf`)
+      },
+    },
+
+    /** Tâches et planning ; `update` avec `status` seul : personnes affectées comprises. */
+    tasks: {
+      list(filters: TaskFilters = {}): Promise<SyncPaginated<Task>> {
+        const { open, overdue, unscheduled, ...rest } = filters
+        return request('GET', 'tasks', undefined, {
+          ...rest,
+          ...(open ? { open: 1 } : {}),
+          ...(overdue ? { overdue: 1 } : {}),
+          ...(unscheduled ? { unscheduled: 1 } : {}),
+        })
+      },
+      async summary(): Promise<TaskSummary> {
+        return (await request<Wrapped<TaskSummary>>('GET', 'tasks/summary')).data
+      },
+      async get(id: number): Promise<Task> {
+        return (await request<Wrapped<Task>>('GET', `tasks/${id}`)).data
+      },
+      async create(payload: TaskPayload & { title: string }): Promise<Task> {
+        return (await request<Wrapped<Task>>('POST', 'tasks', payload)).data
+      },
+      async update(id: number, payload: Omit<TaskPayload, 'subtasks' | 'client_uuid'>): Promise<Task> {
+        return (await request<Wrapped<Task>>('PATCH', `tasks/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `tasks/${id}`)
+      },
+      async addSubtask(id: number, title: string): Promise<Task> {
+        return (await request<Wrapped<Task>>('POST', `tasks/${id}/subtasks`, { title })).data
+      },
+      async updateSubtask(subtaskId: number, payload: { title?: string; is_done?: boolean }): Promise<Task> {
+        return (await request<Wrapped<Task>>('PATCH', `subtasks/${subtaskId}`, payload)).data
+      },
+      async removeSubtask(subtaskId: number): Promise<Task> {
+        return (await request<Wrapped<Task>>('DELETE', `subtasks/${subtaskId}`)).data
       },
     },
 
