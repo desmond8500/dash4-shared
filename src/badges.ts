@@ -60,7 +60,7 @@ export function parseBadgeList(text: string): { badges: BadgePayload[]; unknownC
       const value = cells[i]?.trim()
       if (!key || !value) return
       if (key === 'valid_until') badge.valid_until = isoDate(value)
-      else badge[key] = value
+      else (badge as Record<string, string | null>)[key] = value
     })
     return badge
   }).filter((b) => b.firstname || b.lastname)
