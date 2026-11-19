@@ -13,6 +13,14 @@ import type {
   InstalledSystemPayload,
   EquipmentPayload,
   ReceptionReport,
+  Badge,
+  BadgePayload,
+  BadgeTemplate,
+  BadgeTemplatePayload,
+  Contract,
+  ContractFilters,
+  ContractPayload,
+  FlatRate,
   Plan,
   PlanMarkerPayload,
   Quantity,
@@ -545,6 +553,96 @@ export function createApiClient(options: ApiClientOptions) {
     /** Dossier des ouvrages exécutés du projet, en PDF. */
     doe(projectId: number): Promise<Blob> {
       return requestBlob(`projects/${projectId}/doe`)
+    },
+
+    /** Badges (`badges.*`) : modèles, badges d'un projet, impression PDF. */
+    badges: {
+      async templates(clientId?: number): Promise<BadgeTemplate[]> {
+        return (await request<Wrapped<BadgeTemplate[]>>('GET', 'badge-templates', undefined, clientId ? { client_id: clientId } : {})).data
+      },
+      async createTemplate(payload: BadgeTemplatePayload & { name: string }): Promise<BadgeTemplate> {
+        return (await request<Wrapped<BadgeTemplate>>('POST', 'badge-templates', payload)).data
+      },
+      async updateTemplate(id: number, payload: BadgeTemplatePayload): Promise<BadgeTemplate> {
+        return (await request<Wrapped<BadgeTemplate>>('PATCH', `badge-templates/${id}`, payload)).data
+      },
+      async removeTemplate(id: number): Promise<void> {
+        await request('DELETE', `badge-templates/${id}`)
+      },
+      /** Logo ou image de fond du modèle (JPEG, PNG, WebP, 2 Mo). */
+      async uploadTemplateImage(id: number, kind: 'logo' | 'background', file: Blob, filename: string): Promise<BadgeTemplate> {
+        const form = new FormData()
+        form.append('logo', file, filename)
+        return (await request<Wrapped<BadgeTemplate>>('POST', `badge-templates/${id}/images/${kind}`, form)).data
+      },
+      async removeTemplateImage(id: number, kind: 'logo' | 'background'): Promise<BadgeTemplate> {
+        return (await request<Wrapped<BadgeTemplate>>('DELETE', `badge-templates/${id}/images/${kind}`)).data
+      },
+      async list(projectId: number): Promise<Badge[]> {
+        return (await request<Wrapped<Badge[]>>('GET', `projects/${projectId}/badges`)).data
+      },
+      async create(projectId: number, payload: BadgePayload): Promise<Badge> {
+        return (await request<Wrapped<Badge>>('POST', `projects/${projectId}/badges`, payload)).data
+      },
+      /** Import d'une liste (500 personnes au plus) ; renvoie tous les badges du projet. */
+      async import(projectId: number, badges: BadgePayload[], templateId: number | null): Promise<Badge[]> {
+        return (await request<Wrapped<Badge[]>>('POST', `projects/${projectId}/badges`, { badges, badge_template_id: templateId })).data
+      },
+      async update(id: number, payload: BadgePayload): Promise<Badge> {
+        return (await request<Wrapped<Badge>>('PATCH', `badges/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `badges/${id}`)
+      },
+      async uploadPhoto(id: number, file: Blob, filename: string): Promise<Badge> {
+        const form = new FormData()
+        form.append('logo', file, filename)
+        return (await request<Wrapped<Badge>>('POST', `badges/${id}/photo`, form)).data
+      },
+      /** `cards` : une carte par page ; `sheet` : planche A4 de 10. */
+      pdf(projectId: number, layout: 'cards' | 'sheet' = 'cards', ids: number[] = []): Promise<Blob> {
+        const query = new URLSearchParams({ layout, ...(ids.length ? { ids: ids.join(',') } : {}) })
+        return requestBlob(`projects/${projectId}/badges/pdf?${query.toString()}`)
+      },
+    },
+
+    /** Contrats de maintenance (`contracts.*`) et forfaits. */
+    contracts: {
+      list(filters: ContractFilters = {}): Promise<Paginated<Contract>> {
+        const { due, ending, ...rest } = filters
+        return request('GET', 'contracts', undefined, { ...rest, ...(due ? { due: 1 } : {}), ...(ending ? { ending: 1 } : {}) })
+      },
+      async get(id: number): Promise<Contract> {
+        return (await request<Wrapped<Contract>>('GET', `contracts/${id}`)).data
+      },
+      async create(payload: ContractPayload & { client_id: number; title: string; start_date: string }): Promise<Contract> {
+        return (await request<Wrapped<Contract>>('POST', 'contracts', payload)).data
+      },
+      async update(id: number, payload: ContractPayload): Promise<Contract> {
+        return (await request<Wrapped<Contract>>('PATCH', `contracts/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `contracts/${id}`)
+      },
+      /** Facture brouillon de la prochaine période. */
+      async invoice(id: number): Promise<Invoice> {
+        return (await request<Wrapped<Invoice>>('POST', `contracts/${id}/invoice`)).data
+      },
+      pdf(id: number): Promise<Blob> {
+        return requestBlob(`contracts/${id}/pdf`)
+      },
+      async flatRates(clientId?: number): Promise<FlatRate[]> {
+        return (await request<Wrapped<FlatRate[]>>('GET', 'flat-rates', undefined, clientId ? { client_id: clientId } : {})).data
+      },
+      async createFlatRate(payload: { designation: string; description?: string | null; unit?: string | null; price?: number; client_id?: number | null; article_id?: number | null }): Promise<FlatRate> {
+        return (await request<Wrapped<FlatRate>>('POST', 'flat-rates', payload)).data
+      },
+      async updateFlatRate(id: number, payload: Partial<{ designation: string; description: string | null; unit: string | null; price: number; client_id: number | null }>): Promise<FlatRate> {
+        return (await request<Wrapped<FlatRate>>('PATCH', `flat-rates/${id}`, payload)).data
+      },
+      async removeFlatRate(id: number): Promise<void> {
+        await request('DELETE', `flat-rates/${id}`)
+      },
     },
 
     /** Procès-verbaux de réception d'un chantier. */

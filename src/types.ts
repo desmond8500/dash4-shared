@@ -379,7 +379,7 @@ export interface Assignee {
 // ---------------------------------------------------------------------------
 
 /** Fiches qui ont un fil de commentaires. */
-export type CommentableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'tech-shares' | 'installed-systems' | 'equipment' | 'reception-reports'
+export type CommentableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'tech-shares' | 'installed-systems' | 'equipment' | 'reception-reports' | 'contracts'
 
 export interface Comment {
   id: number
@@ -422,6 +422,7 @@ export interface AppNotification {
   tech_share_id?: number | null
   tech_access_request_id?: number
   comment_id?: number
+  contract_id?: number
   /** Fiche concernée (mention dans un commentaire). */
   subject_type?: CommentableType
   subject_id?: number
@@ -452,7 +453,7 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
 export const ACTIVE_PROJECT_STATUSES: ProjectStatus[] = ['planned', 'in_progress', 'on_hold']
 
 /** Fiches qui acceptent notes, liens et documents (segment de l'adresse de l'API). */
-export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'journal-sections' | 'tech-shares' | 'comments' | 'buildings' | 'installed-systems' | 'equipment' | 'reception-reports' | 'sheets'
+export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'journal-sections' | 'tech-shares' | 'comments' | 'buildings' | 'installed-systems' | 'equipment' | 'reception-reports' | 'sheets' | 'contracts'
 
 export interface Note {
   id: number
@@ -2347,4 +2348,159 @@ export interface SheetPayload {
   notes?: string | null
   /** Remplacent la liste. */
   zones?: Array<Omit<SheetZone, 'id' | 'position'>>
+}
+
+// ---------------------------------------------------------------------------
+// Badges
+// ---------------------------------------------------------------------------
+
+export type BadgeField = 'job_title' | 'department' | 'division' | 'employee_number' | 'valid_until'
+
+export const BADGE_FIELDS: Array<{ value: BadgeField; label: string }> = [
+  { value: 'job_title', label: 'Fonction' },
+  { value: 'department', label: 'Service' },
+  { value: 'division', label: 'Direction' },
+  { value: 'employee_number', label: 'Matricule' },
+  { value: 'valid_until', label: "Valable jusqu'au" },
+]
+
+export interface BadgeTemplate {
+  id: number
+  client_id: number | null
+  client?: { id: number; name: string } | null
+  name: string
+  orientation: 'landscape' | 'portrait'
+  primary_color: string
+  text_color: string
+  title: string | null
+  subtitle: string | null
+  fields: BadgeField[]
+  footer: string | null
+  logo_url: string | null
+  background_url: string | null
+  updated_at: string | null
+}
+
+export type BadgeTemplatePayload = Partial<Pick<BadgeTemplate, 'client_id' | 'name' | 'orientation' | 'primary_color' | 'text_color' | 'title' | 'subtitle' | 'fields' | 'footer'>>
+
+export interface Badge {
+  id: number
+  project_id: number
+  badge_template_id: number | null
+  firstname: string | null
+  lastname: string | null
+  full_name: string
+  job_title: string | null
+  department: string | null
+  division: string | null
+  employee_number: string | null
+  address: string | null
+  valid_until: string | null
+  photo_url: string | null
+  printed_at: string | null
+  updated_at: string | null
+}
+
+export type BadgePayload = Partial<Pick<Badge, 'badge_template_id' | 'firstname' | 'lastname' | 'job_title' | 'department' | 'division' | 'employee_number' | 'address' | 'valid_until'>>
+
+// ---------------------------------------------------------------------------
+// Contrats et forfaits
+// ---------------------------------------------------------------------------
+
+export type ContractStatus = 'draft' | 'active' | 'suspended' | 'ended'
+export type BillingPeriod = 'monthly' | 'quarterly' | 'half_yearly' | 'yearly'
+
+export const CONTRACT_STATUSES: Array<{ value: ContractStatus; label: string }> = [
+  { value: 'draft', label: 'Brouillon' },
+  { value: 'active', label: 'En cours' },
+  { value: 'suspended', label: 'Suspendu' },
+  { value: 'ended', label: 'Terminé' },
+]
+
+export const BILLING_PERIODS: Array<{ value: BillingPeriod; label: string; months: number }> = [
+  { value: 'monthly', label: 'Mensuelle', months: 1 },
+  { value: 'quarterly', label: 'Trimestrielle', months: 3 },
+  { value: 'half_yearly', label: 'Semestrielle', months: 6 },
+  { value: 'yearly', label: 'Annuelle', months: 12 },
+]
+
+/** Forfait : `price` seulement avec `prices.view`. */
+export interface FlatRate {
+  id: number
+  designation: string
+  description: string | null
+  unit: string | null
+  client_id: number | null
+  client?: { id: number; name: string } | null
+  article_id: number | null
+  price?: number
+}
+
+export interface ContractLine {
+  id?: number
+  flat_rate_id: number | null
+  designation: string
+  unit: string | null
+  quantity: number
+  /** Prix par période (avec `prices.view`). */
+  unit_price?: number
+  line_total?: number
+}
+
+export interface Contract {
+  id: number
+  number: string | null
+  client_id: number
+  client?: { id: number; name: string } | null
+  project_id: number | null
+  project?: { id: number; name: string } | null
+  title: string
+  status: Labelled<ContractStatus>
+  start_date: string | null
+  end_date: string | null
+  tacit_renewal: boolean
+  billing_period: Labelled<BillingPeriod>
+  next_invoice_date: string | null
+  /** Une période est à facturer. */
+  invoice_due: boolean
+  /** L'échéance tombe dans le préavis. */
+  ends_soon: boolean
+  visits_per_year: number
+  notice_days: number
+  description: string | null
+  terms: string | null
+  period_amount?: number
+  lines?: ContractLine[]
+  invoices?: Array<{ id: number; number: string | null; status: Labelled<string>; period_start: string | null; period_end: string | null; total?: number }>
+  can: { update: boolean; delete: boolean; invoice: boolean }
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface ContractFilters {
+  status?: ContractStatus
+  client_id?: number
+  due?: boolean
+  ending?: boolean
+  search?: string
+  page?: number
+  per_page?: number
+}
+
+export interface ContractPayload {
+  client_id?: number
+  project_id?: number | null
+  title?: string
+  status?: ContractStatus
+  start_date?: string
+  end_date?: string | null
+  tacit_renewal?: boolean
+  billing_period?: BillingPeriod
+  next_invoice_date?: string | null
+  visits_per_year?: number
+  notice_days?: number
+  description?: string | null
+  terms?: string | null
+  /** Remplacent la liste. */
+  lines?: Array<Pick<ContractLine, 'flat_rate_id' | 'designation' | 'unit' | 'quantity' | 'unit_price'>>
 }
