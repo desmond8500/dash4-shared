@@ -69,3 +69,8 @@ lignes, `order`, `cancel`, `receive`, `pdf`). Bordereaux : `api.quotes.releaseDe
 `api.tasks` : `list` (planning : `from` + `to` ; `open`, `overdue`, `unscheduled`, `assigned_to: 'me'`…), `summary`,
 `create` (avec `assignee_ids`, `subtasks`), `update` (`status` seul : personnes affectées), sous-tâches.
 `api.clientRequests.convert(id, { type: 'task' })`.
+
+### Emplacements, boîte mail, liens des demandes (0.14.0)
+
+`api.storageLocations`, `api.articles.list({ storage_location_id })` ; `api.inbox` (`list`, `get`, `fetch`, `convert`, `ignore`,
+`attachment`) ; `api.clientRequestLinks` (`candidates`, `add`, `remove`).

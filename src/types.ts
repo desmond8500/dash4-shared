@@ -316,6 +316,11 @@ export interface ClientRequest {
   is_overdue: boolean
   /** Ce que la demande est devenue (tâche, devis, projet…). */
   converted_to: { type: string; id: number } | null
+  contact_email?: string | null
+  /** Tâches, factures, bordereaux, devis, projets liés à la demande. */
+  links?: ClientRequestLink[]
+  /** Demande née d'un e-mail de la boîte de réception. */
+  inbound_email_id?: number | null
   created_at: string | null
   updated_at: string | null
   deleted_at: string | null
@@ -327,6 +332,7 @@ export interface ClientRequestPayload {
   client_id?: number | null
   contact_name?: string | null
   contact_phone?: string | null
+  contact_email?: string | null
   source?: ClientRequestSource
   /** Ignorés pour un compte qui ne traite pas les demandes (technicien). */
   status?: ClientRequestStatus
@@ -402,7 +408,7 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
 export const ACTIVE_PROJECT_STATUSES: ProjectStatus[] = ['planned', 'in_progress', 'on_hold']
 
 /** Fiches qui acceptent notes, liens et documents (segment de l'adresse de l'API). */
-export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks'
+export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests'
 
 export interface Note {
   id: number
@@ -1234,6 +1240,9 @@ export interface Article {
   quantity: number
   min_quantity: number | null
   is_low: boolean
+  storage_location_id: number | null
+  storage_location?: { id: number; name: string; code: string | null } | null
+  /** Nom de l'emplacement. */
   location: string | null
   weight: number | null
   image_url: string | null
@@ -1258,6 +1267,7 @@ export interface ArticleFilters extends SyncFilters {
   barcode?: string
   brand_id?: number
   provider_id?: number
+  storage_location_id?: number
   /** Plusieurs catégories séparées par des virgules. */
   category?: string
   low?: boolean
@@ -1279,7 +1289,7 @@ export interface ArticlePayload {
   unit_cost?: number
   coefficient?: number
   min_quantity?: number | null
-  location?: string | null
+  storage_location_id?: number | null
   weight?: number | null
   is_active?: boolean
   /** À la création : enregistrée comme un inventaire. */
@@ -1690,4 +1700,67 @@ export interface TaskSummary {
   mine_overdue: number
   overdue: number
   unassigned: number
+}
+
+// ---------------------------------------------------------------------------
+// Emplacements du stock ; boîte mail des demandes ; liens d'une demande
+// ---------------------------------------------------------------------------
+
+export interface StorageLocation {
+  id: number
+  name: string
+  code: string | null
+  description: string | null
+  is_active: boolean
+  articles_count: number
+  /** Pièces rangées (somme des quantités). */
+  units: number
+  can: { update: boolean; delete: boolean }
+}
+
+export type ClientRequestLinkType = 'task' | 'invoice' | 'delivery_note' | 'quote' | 'project'
+
+export const CLIENT_REQUEST_LINK_TYPES: Array<{ value: ClientRequestLinkType; label: string }> = [
+  { value: 'task', label: 'Tâche' },
+  { value: 'invoice', label: 'Facture' },
+  { value: 'delivery_note', label: 'Bordereau' },
+  { value: 'quote', label: 'Devis' },
+  { value: 'project', label: 'Projet' },
+]
+
+export interface ClientRequestLink {
+  id: number
+  type: ClientRequestLinkType
+  type_label: string
+  target_id: number
+  label: string
+  /** Bordereau : devis qui le porte. */
+  quote_id: number | null
+}
+
+export type InboundEmailStatus = 'new' | 'converted' | 'ignored'
+
+export interface InboundEmail {
+  id: number
+  from_email: string | null
+  from_name: string | null
+  to: string | null
+  subject: string
+  preview: string
+  /** Sur la fiche. */
+  body_text?: string | null
+  has_html?: boolean
+  received_at: string | null
+  status: Labelled<InboundEmailStatus>
+  client: { id: number; name: string } | null
+  client_request_id: number | null
+  attachments: Array<{ index: number; name: string; mime: string; size: number }>
+  handler?: UserRef | null
+  handled_at: string | null
+}
+
+export interface InboundEmailMeta extends PaginationMeta {
+  new_count: number
+  configured: boolean
+  address: string | null
 }

@@ -301,6 +301,19 @@ describe('client API', () => {
     expect(JSON.parse(fetch.mock.calls[3]?.[1]?.body)).toEqual({ lines: [{ id: 1, quantity: 4 }] })
   })
 
+  it('transforme un e-mail en demande et lie la demande à un bordereau', async () => {
+    const fetch = vi.fn().mockImplementation(async () => jsonResponse(200, { data: { id: 3 } }))
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+
+    await api.inbox.convert(9, { client_id: 4 })
+    await api.clientRequestLinks.candidates('delivery_note', 'BL-2026')
+    await api.clientRequestLinks.add(3, 'delivery_note', 7)
+
+    expect(fetch.mock.calls[0]?.[0]).toBe('https://api.test/api/v1/inbound-emails/9/convert')
+    expect(fetch.mock.calls[1]?.[0]).toBe('https://api.test/api/v1/client-request-link-candidates?type=delivery_note&search=BL-2026')
+    expect(JSON.parse(fetch.mock.calls[2]?.[1]?.body)).toEqual({ type: 'delivery_note', id: 7 })
+  })
+
   it('cherche les tâches de la semaine et coche une sous-tâche', async () => {
     const fetch = vi.fn().mockImplementation(async () => jsonResponse(200, { data: { id: 1 } }))
     const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })

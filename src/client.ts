@@ -4,6 +4,11 @@ import type {
   DeliveryNotePayload,
   QuoteDepositPayload,
   QuoteEmailDraft,
+  ClientRequestLinkType,
+  Priority,
+  InboundEmail,
+  InboundEmailMeta,
+  StorageLocation,
   Task,
   TaskFilters,
   TaskPayload,
@@ -330,6 +335,60 @@ export function createApiClient(options: ApiClientOptions) {
             payload,
           )
         ).data
+      },
+    },
+
+    /** Boîte mail des demandes (`client_requests.update`). */
+    inbox: {
+      list(filters: { status?: 'new' | 'converted' | 'ignored' | 'all'; search?: string; page?: number } = {}): Promise<{ data: InboundEmail[]; meta: InboundEmailMeta }> {
+        return request('GET', 'inbound-emails', undefined, { ...filters })
+      },
+      async get(id: number): Promise<InboundEmail> {
+        return (await request<Wrapped<InboundEmail>>('GET', `inbound-emails/${id}`)).data
+      },
+      /** Relève la boîte tout de suite. */
+      async fetch(): Promise<{ imported: number; skipped: number }> {
+        return (await request<Wrapped<{ imported: number; skipped: number }>>('POST', 'inbound-emails/fetch')).data
+      },
+      async convert(id: number, payload: { client_id?: number | null; body?: string; priority?: Priority; assigned_to?: number | null } = {}): Promise<{ email: InboundEmail; request: ClientRequest }> {
+        return (await request<Wrapped<{ email: InboundEmail; request: ClientRequest }>>('POST', `inbound-emails/${id}/convert`, payload)).data
+      },
+      async ignore(id: number, restore = false): Promise<InboundEmail> {
+        return (await request<Wrapped<InboundEmail>>('POST', `inbound-emails/${id}/ignore`, restore ? { restore: true } : {})).data
+      },
+      attachment(id: number, index: number): Promise<Blob> {
+        return requestBlob(`inbound-emails/${id}/attachments/${index}`)
+      },
+    },
+
+    /** Liens d'une demande vers des tâches, factures, bordereaux, devis, projets. */
+    clientRequestLinks: {
+      async candidates(type: ClientRequestLinkType, search = ''): Promise<Array<{ id: number; label: string }>> {
+        return (await request<Wrapped<Array<{ id: number; label: string }>>>('GET', 'client-request-link-candidates', undefined, { type, search })).data
+      },
+      async add(requestId: number, type: ClientRequestLinkType, id: number): Promise<ClientRequest> {
+        return (await request<Wrapped<ClientRequest>>('POST', `client-requests/${requestId}/links`, { type, id })).data
+      },
+      async remove(linkId: number): Promise<ClientRequest> {
+        return (await request<Wrapped<ClientRequest>>('DELETE', `client-request-links/${linkId}`)).data
+      },
+    },
+
+    storageLocations: {
+      async list(all = false): Promise<StorageLocation[]> {
+        return (await request<Wrapped<StorageLocation[]>>('GET', 'storage-locations', undefined, all ? { all: 1 } : undefined)).data
+      },
+      async get(id: number): Promise<StorageLocation> {
+        return (await request<Wrapped<StorageLocation>>('GET', `storage-locations/${id}`)).data
+      },
+      async create(payload: { name: string; code?: string | null; description?: string | null }): Promise<StorageLocation> {
+        return (await request<Wrapped<StorageLocation>>('POST', 'storage-locations', payload)).data
+      },
+      async update(id: number, payload: { name?: string; code?: string | null; description?: string | null; is_active?: boolean }): Promise<StorageLocation> {
+        return (await request<Wrapped<StorageLocation>>('PATCH', `storage-locations/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `storage-locations/${id}`)
       },
     },
 
