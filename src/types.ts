@@ -2504,3 +2504,52 @@ export interface ContractPayload {
   /** Remplacent la liste. */
   lines?: Array<Pick<ContractLine, 'flat_rate_id' | 'designation' | 'unit' | 'quantity' | 'unit_price'>>
 }
+
+// ---------------------------------------------------------------------------
+// Tableau de bord
+// ---------------------------------------------------------------------------
+
+export type DashboardWidgetKey =
+  | 'my_tasks' | 'client_requests' | 'revenue' | 'receivables' | 'quotes' | 'team_tasks' | 'sites'
+  | 'contracts' | 'expenses' | 'stock' | 'purchases' | 'tech_space'
+
+export const DASHBOARD_WIDGETS: Record<DashboardWidgetKey, string> = {
+  my_tasks: 'Mes tâches',
+  client_requests: 'Demandes clients',
+  revenue: 'Encaissements',
+  receivables: 'Impayés',
+  quotes: 'Devis',
+  team_tasks: "Tâches de l'équipe",
+  sites: 'Chantiers',
+  contracts: 'Contrats',
+  expenses: 'Dépenses',
+  stock: 'Stock bas',
+  purchases: 'Achats',
+  tech_space: 'Espace technicien',
+}
+
+/** Données des widgets (seulement ceux que le compte a le droit de voir, et non masqués). */
+export interface DashboardWidgets {
+  my_tasks?: { open: number; overdue: number; today: number; items: Array<{ id: number; title: string; due_date: string | null; status: string; overdue: boolean }> }
+  client_requests?: { open: number; new: number; late: number; reminders: number }
+  revenue?: { this_month: number; last_month: number; invoiced_this_month: number; series: Array<{ month: string; amount: number }> }
+  receivables?: { count: number; amount: number; overdue_count: number; overdue_amount: number }
+  quotes?: { drafts: number; sent: number; accepted_this_month: number; sent_amount?: number }
+  team_tasks?: { open: number; overdue: number; blocked: number; unassigned: number }
+  sites?: { items: Array<{ id: number; name: string; progress: number; systems: number }> }
+  contracts?: { active: number; due: number; ending: number }
+  expenses?: { my_submitted: number; my_to_reimburse: number; my_submitted_amount: number; to_validate?: number; to_reimburse?: number }
+  stock?: { low: number; items: Array<{ id: number; designation: string; quantity: number; min_quantity: number | null }> }
+  purchases?: { drafts: number; awaiting: number }
+  tech_space?: { unread_shares: number; my_pending_requests: number; to_decide: number }
+}
+
+export interface DashboardLayout {
+  order: DashboardWidgetKey[]
+  hidden: DashboardWidgetKey[]
+}
+
+export interface DashboardData {
+  layout: DashboardLayout
+  widgets: DashboardWidgets
+}

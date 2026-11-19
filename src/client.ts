@@ -14,6 +14,8 @@ import type {
   EquipmentPayload,
   ReceptionReport,
   Badge,
+  DashboardData,
+  DashboardLayout,
   BadgePayload,
   BadgeTemplate,
   BadgeTemplatePayload,
@@ -553,6 +555,16 @@ export function createApiClient(options: ApiClientOptions) {
     /** Dossier des ouvrages exécutés du projet, en PDF. */
     doe(projectId: number): Promise<Blob> {
       return requestBlob(`projects/${projectId}/doe`)
+    },
+
+    /** Tableau de bord selon les droits ; l'ordre et le masquage sont propres à l'utilisateur. */
+    dashboard: {
+      async get(): Promise<DashboardData> {
+        return (await request<Wrapped<DashboardData>>('GET', 'dashboard')).data
+      },
+      async saveLayout(layout: DashboardLayout): Promise<DashboardData> {
+        return (await request<Wrapped<DashboardData>>('PUT', 'dashboard/layout', layout)).data
+      },
     },
 
     /** Badges (`badges.*`) : modèles, badges d'un projet, impression PDF. */
