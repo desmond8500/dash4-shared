@@ -7,6 +7,10 @@ import type {
   Journal,
   JournalFilters,
   TechShare,
+  Comment,
+  CommentPayload,
+  CommentableType,
+  Mentionable,
   TechShareFilters,
   TechSharePayload,
   TechAccessRequest,
@@ -377,6 +381,28 @@ export function createApiClient(options: ApiClientOptions) {
       /** Envoie le rapport par e-mail avec son PDF. */
       async send(id: number, payload: QuoteEmailPayload): Promise<Journal> {
         return (await request<Wrapped<Journal>>('POST', `journals/${id}/send`, payload)).data
+      },
+    },
+
+    /** Fil de commentaires d'une fiche : qui voit la fiche peut commenter. */
+    comments: {
+      /** Du plus ancien au plus récent ; avec `updatedSince`, les changements (suppressions comprises). */
+      list(type: CommentableType, id: number, updatedSince?: string | null): Promise<{ data: Comment[]; meta: { server_time: string } }> {
+        return request('GET', `${type}/${id}/comments`, undefined, updatedSince ? { updated_since: updatedSince } : {})
+      },
+      async create(type: CommentableType, id: number, payload: CommentPayload): Promise<Comment> {
+        return (await request<Wrapped<Comment>>('POST', `${type}/${id}/comments`, payload)).data
+      },
+      /** L'auteur seulement ; les nouvelles mentions sont prévenues. */
+      async update(commentId: number, payload: Partial<Omit<CommentPayload, 'client_uuid'>>): Promise<Comment> {
+        return (await request<Wrapped<Comment>>('PATCH', `comments/${commentId}`, payload)).data
+      },
+      async remove(commentId: number): Promise<void> {
+        await request('DELETE', `comments/${commentId}`)
+      },
+      /** Personnes qui voient la fiche, à mentionner avec @. */
+      async mentionable(type: CommentableType, id: number): Promise<Mentionable[]> {
+        return (await request<Wrapped<Mentionable[]>>('GET', `${type}/${id}/mentionable`)).data
       },
     },
 

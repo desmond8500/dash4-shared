@@ -374,6 +374,43 @@ export interface Assignee {
 // Notifications
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Commentaires
+// ---------------------------------------------------------------------------
+
+/** Fiches qui ont un fil de commentaires. */
+export type CommentableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'tech-shares'
+
+export interface Comment {
+  id: number
+  client_uuid: string | null
+  body: string
+  author?: UserRef | null
+  created_by: number | null
+  /** Personnes mentionnées (et prévenues). */
+  mentions?: Array<{ id: number; full_name: string }>
+  /** Pièces jointes (documents du type `comments`). */
+  files?: Document[]
+  edited_at: string | null
+  can: { update: boolean; delete: boolean }
+  created_at: string | null
+  updated_at: string | null
+  deleted_at: string | null
+}
+
+export interface CommentPayload {
+  client_uuid?: string
+  body: string
+  /** Ids des personnes mentionnées ; celles qui ne voient pas la fiche sont ignorées. */
+  mentions?: number[]
+}
+
+export interface Mentionable {
+  id: number
+  full_name: string
+  job_title: string | null
+}
+
 export interface AppNotification {
   id: string
   /** Ex. `client_request.overdue`, `client_request.reminder`. */
@@ -384,6 +421,10 @@ export interface AppNotification {
   task_id?: number
   tech_share_id?: number | null
   tech_access_request_id?: number
+  comment_id?: number
+  /** Fiche concernée (mention dans un commentaire). */
+  subject_type?: CommentableType
+  subject_id?: number
   read_at: string | null
   created_at: string | null
 }
@@ -411,7 +452,7 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
 export const ACTIVE_PROJECT_STATUSES: ProjectStatus[] = ['planned', 'in_progress', 'on_hold']
 
 /** Fiches qui acceptent notes, liens et documents (segment de l'adresse de l'API). */
-export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'journal-sections' | 'tech-shares'
+export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'journal-sections' | 'tech-shares' | 'comments'
 
 export interface Note {
   id: number
