@@ -45,3 +45,42 @@ describe('messagerie', () => {
     expect(sameGroup(msg(1), msg(2, { user_id: 2 }))).toBe(false)
   })
 })
+
+describe('relève des messages', () => {
+  it('ralentit quand rien n’arrive', async () => {
+    const { pollDelay } = await import('../src/messaging.js')
+    expect([0, 1, 2, 3, 9].map((n) => pollDelay(n))).toEqual([5_000, 15_000, 30_000, 60_000, 60_000])
+  })
+
+  it('ne tourne plus après stop et repart vite après poke', async () => {
+    const { vi } = await import('vitest')
+    const { createPoller } = await import('../src/messaging.js')
+    vi.useFakeTimers()
+    let calls = 0
+    let news = false
+    const poller = createPoller(async () => {
+      calls++
+      return news
+    })
+    poller.start()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(calls).toBe(1)
+    await vi.advanceTimersByTimeAsync(15_000) // 1 relève sans nouveauté → 15 s
+    expect(calls).toBe(2)
+    await vi.advanceTimersByTimeAsync(29_000) // prochaine dans 30 s : pas encore
+    expect(calls).toBe(2)
+    poller.poke()
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect(calls).toBe(3)
+    news = true
+    await vi.advanceTimersByTimeAsync(15_000)
+    expect(calls).toBe(4)
+    await vi.advanceTimersByTimeAsync(5_000) // du nouveau → retour à 5 s
+    expect(calls).toBe(5)
+    poller.stop()
+    await vi.advanceTimersByTimeAsync(600_000)
+    expect(calls).toBe(5)
+    expect(poller.running).toBe(false)
+    vi.useRealTimers()
+  })
+})

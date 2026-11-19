@@ -43,3 +43,75 @@ export function sameGroup(previous: Pick<Message, 'user_id' | 'created_at'> | un
   if (!previous || previous.user_id !== message.user_id || !previous.created_at || !message.created_at) return false
   return Math.abs(new Date(message.created_at).getTime() - new Date(previous.created_at).getTime()) < 5 * 60_000
 }
+
+/** Rythme de relève : rapide juste après un échange, puis de plus en plus lent si rien n'arrive. */
+export const POLL_STEPS = [5_000, 15_000, 30_000, 60_000]
+
+/** Délai avant la prochaine relève, selon le nombre de relèves sans nouveauté d'affilée. */
+export function pollDelay(quietPolls: number, steps: number[] = POLL_STEPS): number {
+  return steps[Math.min(Math.max(quietPolls, 0), steps.length - 1)] ?? 60_000
+}
+
+export interface Poller {
+  /** Démarre (relève immédiate) ; sans effet si déjà en route. */
+  start(): void
+  /** Arrête toute relève (écran quitté, onglet caché, application en arrière-plan). */
+  stop(): void
+  /** Il vient de se passer quelque chose (message envoyé…) : on repart au rythme rapide. */
+  poke(): void
+  readonly running: boolean
+}
+
+/**
+ * Relève régulière qui ralentit d'elle-même : `run` renvoie true s'il y avait du nouveau.
+ * Une seule relève à la fois, jamais en parallèle ; rien ne tourne après `stop()`.
+ */
+export function createPoller(run: () => Promise<boolean>, steps: number[] = POLL_STEPS): Poller {
+  let timer: ReturnType<typeof setTimeout> | null = null
+  let running = false
+  let busy = false
+  let quiet = 0
+
+  const clear = () => {
+    if (timer) clearTimeout(timer)
+    timer = null
+  }
+  const schedule = (delay: number) => {
+    clear()
+    if (running) timer = setTimeout(() => void tick(), delay)
+  }
+  async function tick(): Promise<void> {
+    if (!running || busy) return
+    busy = true
+    let active = false
+    try {
+      active = await run()
+    } catch {
+      active = false
+    } finally {
+      busy = false
+    }
+    quiet = active ? 0 : quiet + 1
+    schedule(pollDelay(quiet, steps))
+  }
+
+  return {
+    start() {
+      if (running) return
+      running = true
+      quiet = 0
+      void tick()
+    },
+    stop() {
+      running = false
+      clear()
+    },
+    poke() {
+      quiet = 0
+      if (running && !busy) schedule(steps[0] ?? 5_000)
+    },
+    get running() {
+      return running
+    },
+  }
+}
