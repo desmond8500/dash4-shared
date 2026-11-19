@@ -136,6 +136,11 @@ import type {
   Wrapped,
   Cv,
   CvPayload,
+  Conversation,
+  ConversationPayload,
+  Message,
+  MessagePage,
+  MessagingUser,
   ProfilePayload,
   PasswordPayload,
 } from './types.js'
@@ -568,6 +573,56 @@ export function createApiClient(options: ApiClientOptions) {
       },
       async saveLayout(layout: DashboardLayout): Promise<DashboardData> {
         return (await request<Wrapped<DashboardData>>('PUT', 'dashboard/layout', layout)).data
+      },
+    },
+
+    /**
+     * Messagerie interne (tous profils) : on ne voit que ses conversations. Pas de temps réel côté serveur :
+     * relever régulièrement `messages(id, { after_id })` et `unread()`.
+     */
+    messaging: {
+      async users(): Promise<MessagingUser[]> {
+        return (await request<Wrapped<MessagingUser[]>>('GET', 'messaging/users')).data
+      },
+      async conversations(filters: { project_id?: number; task_id?: number; updated_since?: string } = {}): Promise<{ data: Conversation[]; meta: { server_time: string; unread_total: number } }> {
+        return request('GET', 'conversations', undefined, filters)
+      },
+      async unread(): Promise<number> {
+        return (await request<Wrapped<{ count: number }>>('GET', 'conversations/unread')).data.count
+      },
+      /** Conversation privée : reprise si elle existe déjà. */
+      async create(payload: ConversationPayload): Promise<Conversation> {
+        return (await request<Wrapped<Conversation>>('POST', 'conversations', payload)).data
+      },
+      async get(id: number | string): Promise<Conversation> {
+        return (await request<Wrapped<Conversation>>('GET', `conversations/${id}`)).data
+      },
+      async rename(id: number, title: string): Promise<Conversation> {
+        return (await request<Wrapped<Conversation>>('PATCH', `conversations/${id}`, { title })).data
+      },
+      async addMembers(id: number, userIds: number[]): Promise<Conversation> {
+        return (await request<Wrapped<Conversation>>('POST', `conversations/${id}/members`, { user_ids: userIds })).data
+      },
+      /** Retirer quelqu'un (créateur du groupe) ou quitter (soi-même). */
+      async removeMember(id: number, userId: number): Promise<void> {
+        await request('DELETE', `conversations/${id}/members/${userId}`)
+      },
+      /** Sans option : les 50 derniers. `after_id` : les nouveaux ; `before_id` : les plus anciens. */
+      async messages(id: number | string, options: { after_id?: number; before_id?: number; updated_since?: string } = {}): Promise<MessagePage> {
+        return request('GET', `conversations/${id}/messages`, undefined, options)
+      },
+      async send(id: number | string, payload: { body?: string | null; with_files?: boolean; client_uuid?: string }): Promise<Message> {
+        return (await request<Wrapped<Message>>('POST', `conversations/${id}/messages`, payload)).data
+      },
+      /** Marque tout comme lu ; renvoie le nouveau total de non lus. */
+      async read(id: number | string, messageId?: number): Promise<number> {
+        return (await request<Wrapped<{ count: number }>>('POST', `conversations/${id}/read`, messageId ? { message_id: messageId } : {})).data.count
+      },
+      async edit(messageId: number, body: string): Promise<Message> {
+        return (await request<Wrapped<Message>>('PATCH', `messages/${messageId}`, { body })).data
+      },
+      async remove(messageId: number): Promise<void> {
+        await request('DELETE', `messages/${messageId}`)
       },
     },
 

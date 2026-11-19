@@ -455,7 +455,7 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
 export const ACTIVE_PROJECT_STATUSES: ProjectStatus[] = ['planned', 'in_progress', 'on_hold']
 
 /** Fiches qui acceptent notes, liens et documents (segment de l'adresse de l'API). */
-export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'journal-sections' | 'tech-shares' | 'comments' | 'buildings' | 'installed-systems' | 'equipment' | 'reception-reports' | 'sheets' | 'contracts'
+export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'journal-sections' | 'tech-shares' | 'comments' | 'buildings' | 'installed-systems' | 'equipment' | 'reception-reports' | 'sheets' | 'contracts' | 'messages'
 
 export interface Note {
   id: number
@@ -2634,4 +2634,71 @@ export interface Cv {
 export type CvPayload = Partial<Omit<Cv, 'id' | 'user_id' | 'photo_url' | 'can' | 'updated_at' | 'sections'>> & {
   /** Envoyées : remplacent tout le contenu du CV. */
   sections?: CvSection[]
+}
+
+// ─── Messagerie interne ────────────────────────────────────────────────────────
+
+export type ConversationType = 'direct' | 'group'
+
+export interface ConversationMember {
+  id: number
+  full_name: string
+  job_title: string | null
+  avatar_url: string | null
+  /** Dernier message lu par ce membre (pour « Vu »). */
+  last_read_message_id: number | null
+}
+
+export interface Conversation {
+  id: number
+  type: ConversationType
+  /** Conversation privée : le nom de l'autre personne. */
+  title: string
+  project: { id: number; name: string } | null
+  task: { id: number; title: string } | null
+  members: ConversationMember[]
+  last_message: { id: number; excerpt: string; author: UserRef | null; created_at: string | null } | null
+  unread_count: number
+  last_message_at: string | null
+  can: { manage: boolean }
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface ConversationPayload {
+  client_uuid?: string
+  type: ConversationType
+  /** Autres participants (la personne connectée est ajoutée d'office). */
+  user_ids: number[]
+  title?: string | null
+  project_id?: number | null
+  task_id?: number | null
+}
+
+export interface Message {
+  id: number
+  client_uuid: string | null
+  conversation_id: number
+  user_id: number | null
+  author?: UserRef | null
+  /** null si le message est supprimé. */
+  body: string | null
+  files: Document[]
+  edited_at: string | null
+  can: { update: boolean }
+  created_at: string | null
+  updated_at: string | null
+  deleted_at: string | null
+}
+
+export interface MessagePage {
+  data: Message[]
+  meta: { server_time: string; reads: { user_id: number; last_read_message_id: number | null }[] }
+}
+
+export interface MessagingUser {
+  id: number
+  full_name: string
+  job_title: string | null
+  avatar_url: string | null
 }
