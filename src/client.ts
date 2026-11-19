@@ -4,6 +4,9 @@ import type {
   DeliveryNotePayload,
   QuoteDepositPayload,
   QuoteEmailDraft,
+  Journal,
+  JournalFilters,
+  JournalPayload,
   ClientRequestLinkType,
   Priority,
   InboundEmail,
@@ -335,6 +338,30 @@ export function createApiClient(options: ApiClientOptions) {
             payload,
           )
         ).data
+      },
+    },
+
+    /** Journaux d'intervention. */
+    journals: {
+      list(filters: JournalFilters = {}): Promise<SyncPaginated<Journal>> {
+        const { mine, ...rest } = filters
+        return request('GET', 'journals', undefined, { ...rest, ...(mine ? { mine: 1 } : {}) })
+      },
+      async get(id: number): Promise<Journal> {
+        return (await request<Wrapped<Journal>>('GET', `journals/${id}`)).data
+      },
+      async create(payload: JournalPayload & { title: string; date: string }): Promise<Journal> {
+        return (await request<Wrapped<Journal>>('POST', 'journals', payload)).data
+      },
+      async update(id: number, payload: Omit<JournalPayload, 'client_uuid'>): Promise<Journal> {
+        return (await request<Wrapped<Journal>>('PATCH', `journals/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `journals/${id}`)
+      },
+      /** Rapport d'intervention avec les photos. */
+      pdf(id: number): Promise<Blob> {
+        return requestBlob(`journals/${id}/pdf`)
       },
     },
 

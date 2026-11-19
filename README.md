@@ -74,3 +74,8 @@ lignes, `order`, `cancel`, `receive`, `pdf`). Bordereaux : `api.quotes.releaseDe
 
 `api.storageLocations`, `api.articles.list({ storage_location_id })` ; `api.inbox` (`list`, `get`, `fetch`, `convert`, `ignore`,
 `attachment`) ; `api.clientRequestLinks` (`candidates`, `add`, `remove`).
+
+### Journaux d'intervention (0.15.0)
+
+`api.journals` : `list` (`project_id`, `task_id`, `from`, `to`, `mine`…), `get`, `create` (`sections`, `participants`, `task_id`),
+`update` (sections et intervenants remplacés), `remove`, `pdf`. Photos : `api.documents.upload('journals', id, …)`.

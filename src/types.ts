@@ -408,7 +408,7 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
 export const ACTIVE_PROJECT_STATUSES: ProjectStatus[] = ['planned', 'in_progress', 'on_hold']
 
 /** Fiches qui acceptent notes, liens et documents (segment de l'adresse de l'API). */
-export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests'
+export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals'
 
 export interface Note {
   id: number
@@ -1763,4 +1763,106 @@ export interface InboundEmailMeta extends PaginationMeta {
   new_count: number
   configured: boolean
   address: string | null
+}
+
+// ---------------------------------------------------------------------------
+// Journaux d'intervention (`journals.*`)
+// ---------------------------------------------------------------------------
+
+export type JournalType = 'intervention' | 'installation' | 'maintenance' | 'repair' | 'visit' | 'other'
+
+export const JOURNAL_TYPES: Array<{ value: JournalType; label: string }> = [
+  { value: 'intervention', label: 'Intervention' },
+  { value: 'installation', label: 'Installation' },
+  { value: 'maintenance', label: 'Maintenance' },
+  { value: 'repair', label: 'Dépannage' },
+  { value: 'visit', label: 'Visite technique' },
+  { value: 'other', label: 'Autre' },
+]
+
+export interface JournalSection {
+  id?: number
+  position?: number
+  title: string
+  body: string | null
+}
+
+export interface JournalParticipant {
+  id: number
+  user_id: number | null
+  contact_id: number | null
+  name: string
+  role: string | null
+  /** Membre de l'équipe, contact du client, ou nom libre. */
+  kind: 'team' | 'contact' | 'other'
+}
+
+export interface JournalParticipantPayload {
+  user_id?: number | null
+  contact_id?: number | null
+  name?: string | null
+  role?: string | null
+}
+
+export interface Journal {
+  id: number
+  client_uuid: string | null
+  title: string
+  type: Labelled<JournalType>
+  date: string | null
+  starts_at: string | null
+  ends_at: string | null
+  project_id: number | null
+  project?: { id: number; name: string } | null
+  client_id: number | null
+  client?: { id: number; name: string } | null
+  /** Jamais envoyé à un technicien. */
+  quote_id: number | null
+  quote?: { id: number; number: string } | null
+  task_id: number | null
+  task?: { id: number; title: string } | null
+  summary: string | null
+  latitude: number | null
+  longitude: number | null
+  sections?: JournalSection[]
+  participants?: JournalParticipant[]
+  photos_count?: number
+  creator?: UserRef | null
+  created_by: number | null
+  can: { update: boolean; delete: boolean }
+  created_at: string | null
+  updated_at: string | null
+  deleted_at: string | null
+}
+
+export interface JournalFilters extends SyncFilters {
+  project_id?: number
+  client_id?: number
+  task_id?: number
+  type?: JournalType
+  from?: string
+  to?: string
+  mine?: boolean
+  search?: string
+}
+
+export interface JournalPayload {
+  client_uuid?: string
+  title?: string
+  type?: JournalType
+  date?: string
+  /** « AAAA-MM-JJ HH:MM », heure locale. */
+  starts_at?: string | null
+  ends_at?: string | null
+  project_id?: number | null
+  client_id?: number | null
+  quote_id?: number | null
+  /** Depuis une tâche : projet, client et intervenants repris. */
+  task_id?: number | null
+  summary?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  /** Remplacent la liste. */
+  sections?: Array<{ title: string; body?: string | null }>
+  participants?: JournalParticipantPayload[]
 }

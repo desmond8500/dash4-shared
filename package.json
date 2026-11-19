@@ -1,6 +1,6 @@
 {
   "name": "@dash4/shared",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "description": "Dash4 — types TypeScript, client API et règles de droits communs au web et au mobile",
   "private": true,
   "license": "UNLICENSED",
