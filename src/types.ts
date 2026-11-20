@@ -1301,6 +1301,9 @@ export interface Article {
   brand?: { id: number; name: string } | null
   provider_id: number | null
   provider?: { id: number; name: string } | null
+  /** Article du stock acheté (facultatif). */
+  article_id?: number | null
+  article?: { id: number; designation: string; reference: string | null } | null
   quantity: number
   min_quantity: number | null
   is_low: boolean
@@ -1349,6 +1352,7 @@ export interface ArticlePayload {
   unit?: string | null
   brand_id?: number | null
   provider_id?: number | null
+  article_id?: number | null
   /** `costs.view`. */
   unit_cost?: number
   coefficient?: number
@@ -2489,6 +2493,8 @@ export interface Contract {
   description: string | null
   terms: string | null
   period_amount?: number
+  /** Visites de maintenance planifiées (chacune avec sa tâche). */
+  visits?: ContractVisit[]
   lines?: ContractLine[]
   invoices?: Array<{ id: number; number: string | null; status: Labelled<string>; period_start: string | null; period_end: string | null; total?: number }>
   can: { update: boolean; delete: boolean; invoice: boolean }
@@ -2791,4 +2797,11 @@ export interface ScheduleItem {
   date: string | null
   amount: number
   overdue: boolean
+}
+
+export interface ContractVisit {
+  id: number
+  number: number
+  planned_on: string | null
+  task: { id: number; title: string; status: LabelledValue<TaskStatus> } | null
 }

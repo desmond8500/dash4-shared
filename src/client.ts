@@ -967,6 +967,10 @@ export function createApiClient(options: ApiClientOptions) {
       list(filters: ProjectFilters = {}): Promise<SyncPaginated<Project>> {
         return request('GET', 'projects', undefined, { ...filters })
       },
+      /** Résumé du projet en PDF (sans montants pour qui ne voit pas les prix). */
+      summaryPdf(id: number): Promise<Blob> {
+        return requestBlob(`projects/${id}/summary-pdf`)
+      },
       /** Fiche complète : notes, liens et documents. */
       async get(id: number): Promise<Project> {
         return (await request<Wrapped<Project>>('GET', `projects/${id}`)).data
