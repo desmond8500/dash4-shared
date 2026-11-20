@@ -1301,9 +1301,6 @@ export interface Article {
   brand?: { id: number; name: string } | null
   provider_id: number | null
   provider?: { id: number; name: string } | null
-  /** Article du stock acheté (facultatif). */
-  article_id?: number | null
-  article?: { id: number; designation: string; reference: string | null } | null
   quantity: number
   min_quantity: number | null
   is_low: boolean
@@ -1352,7 +1349,6 @@ export interface ArticlePayload {
   unit?: string | null
   brand_id?: number | null
   provider_id?: number | null
-  article_id?: number | null
   /** `costs.view`. */
   unit_cost?: number
   coefficient?: number
@@ -1518,6 +1514,9 @@ export interface Expense {
   quote?: { id: number; number: string } | null
   provider_id: number | null
   provider?: { id: number; name: string } | null
+  /** Article du stock acheté (facultatif). */
+  article_id?: number | null
+  article?: { id: number; designation: string; reference: string | null } | null
   payment_method: Labelled<PaymentMethod> | null
   /** Payée avec son propre argent : à lui rembourser. */
   advanced: boolean
@@ -1562,6 +1561,7 @@ export interface ExpensePayload {
   project_id?: number | null
   quote_id?: number | null
   provider_id?: number | null
+  article_id?: number | null
   payment_method?: PaymentMethod | null
   advanced?: boolean
   is_paid?: boolean
