@@ -635,6 +635,17 @@ export function createApiClient(options: ApiClientOptions) {
       },
     },
 
+    /** Exports comptables (exports.run et prices.view) : CSV pour un tableur, journal FEC. */
+    exports: {
+      async types(): Promise<{ value: string; label: string }[]> {
+        return (await request<Wrapped<{ value: string; label: string }[]>>('GET', 'exports')).data
+      },
+      /** `from` et `to` au format AAAA-MM-JJ. */
+      download(type: string, from: string, to: string): Promise<Blob> {
+        return requestBlob(`exports/${type}?${new URLSearchParams({ from, to }).toString()}`)
+      },
+    },
+
     /** Sauvegardes (backups.manage, administrateurs). */
     backups: {
       async list(): Promise<{ data: Backup[]; meta: { keep_days: number } }> {
