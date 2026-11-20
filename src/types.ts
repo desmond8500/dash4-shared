@@ -646,6 +646,13 @@ export interface AppSettings {
   numbering: Record<DocumentType, string>
   /** Prochain numéro de chaque type de document. */
   next_numbers: Record<DocumentType, string>
+  /** Relances de paiement : paliers en jours après l'échéance, envoi automatique au client. */
+  reminders?: ReminderSettings
+}
+
+export interface ReminderSettings {
+  auto: boolean
+  days: number[]
 }
 
 export type SettingsPayload = Partial<Omit<AppSettings, 'next_numbers' | 'numbering'>> & {
@@ -1137,11 +1144,18 @@ export interface Invoice {
   tax_amount: number
   total: number
   paid_amount: number
+  /** Total des avoirs émis sur la facture. */
+  credited_amount?: number
+  /** Reste à payer : total − paiements − avoirs. */
   remaining_amount: number
+  /** Montant qu'un nouvel avoir peut encore annuler. */
+  creditable_amount?: number
   paid_at: string | null
   /** Sur la fiche. */
   lines?: InvoiceLine[]
   payments?: InvoicePayment[]
+  credit_notes?: CreditNote[]
+  reminders?: InvoiceReminder[]
   emails?: QuoteEmailRecord[]
   creator?: UserRef | null
   issuer?: UserRef | null
@@ -2571,7 +2585,7 @@ export interface ProfilePayload {
 
 export type Theme = 'system' | 'light' | 'dark'
 
-export type NotificationCategory = 'mentions' | 'tasks' | 'requests' | 'tech' | 'expenses' | 'stock' | 'contracts'
+export type NotificationCategory = 'mentions' | 'tasks' | 'requests' | 'tech' | 'expenses' | 'stock' | 'contracts' | 'invoices'
 
 export interface UserPreferences {
   theme: Theme
@@ -2593,6 +2607,7 @@ export const NOTIFICATION_CATEGORIES: { value: NotificationCategory; label: stri
   { value: 'expenses', label: 'Dépenses' },
   { value: 'stock', label: 'Stock bas' },
   { value: 'contracts', label: 'Contrats de maintenance' },
+  { value: 'invoices', label: 'Factures à relancer' },
 ]
 
 /** Le thème sombre s'applique-t-il ? (`system` : selon l'appareil) */
@@ -2745,4 +2760,34 @@ export interface Backup {
   kind: 'database' | 'files'
   size: number
   created_at: string
+}
+
+// ─── Avoirs, relances et échéancier ────────────────────────────────────────────
+
+export interface CreditNote {
+  id: number
+  number: string
+  amount: number
+  reason: string
+  issued_at: string | null
+  creator?: UserRef | null
+}
+
+export interface InvoiceReminder {
+  id: number
+  level: number
+  automatic: boolean
+  sent_at: string | null
+  sender?: UserRef | null
+}
+
+export interface ScheduleItem {
+  kind: 'invoice' | 'deposit' | 'contract'
+  /** Facture, devis (acompte) ou contrat à ouvrir. */
+  id: number
+  label: string
+  client: string | null
+  date: string | null
+  amount: number
+  overdue: boolean
 }

@@ -135,6 +135,7 @@ import type {
   UserPayload,
   Wrapped,
   Backup,
+  ScheduleItem,
   Cv,
   CvPayload,
   Conversation,
@@ -1201,6 +1202,24 @@ export function createApiClient(options: ApiClientOptions) {
       },
       async send(id: number, payload: Omit<QuoteEmailPayload, 'attach_proposal'>): Promise<Invoice> {
         return (await request<Wrapped<Invoice>>('POST', `invoices/${id}/send`, payload)).data
+      },
+      /** Relance suivante proposée (`level` : numéro de la relance). */
+      async reminderDraft(id: number): Promise<QuoteEmailDraft & { level: number }> {
+        return (await request<Wrapped<QuoteEmailDraft & { level: number }>>('GET', `invoices/${id}/reminder-draft`)).data
+      },
+      async remind(id: number, payload: Omit<QuoteEmailPayload, 'attach_proposal'>): Promise<Invoice> {
+        return (await request<Wrapped<Invoice>>('POST', `invoices/${id}/remind`, payload)).data
+      },
+      /** Avoir : `amount` absent = tout ce qui reste à annuler. */
+      async createCreditNote(id: number, payload: { reason: string; amount?: number; issued_at?: string }): Promise<{ id: number; number: string; amount: number }> {
+        return (await request<Wrapped<{ id: number; number: string; amount: number }>>('POST', `invoices/${id}/credit-notes`, payload)).data
+      },
+      creditNotePdf(creditNoteId: number): Promise<Blob> {
+        return requestBlob(`credit-notes/${creditNoteId}/pdf`)
+      },
+      /** Échéancier des encaissements attendus (factures, acomptes, contrats). */
+      async schedule(months = 6): Promise<{ data: ScheduleItem[]; meta: { total: number; overdue: number } }> {
+        return request('GET', 'invoices/schedule', undefined, { months })
       },
     },
 
