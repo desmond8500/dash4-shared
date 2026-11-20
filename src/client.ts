@@ -270,6 +270,13 @@ export function createApiClient(options: ApiClientOptions) {
       async me(): Promise<CurrentUser> {
         return (await request<Wrapped<CurrentUser>>('GET', 'auth/me')).data
       },
+      /** Envoie le lien « mot de passe oublié » (même réponse que l'adresse soit connue ou non). */
+      async forgotPassword(email: string): Promise<string> {
+        return (await request<{ message: string }>('POST', 'auth/forgot-password', { email })).message
+      },
+      async resetPassword(payload: { token: string; email: string; password: string; password_confirmation: string }): Promise<string> {
+        return (await request<{ message: string }>('POST', 'auth/reset-password', payload)).message
+      },
       async logout(): Promise<void> {
         try {
           await request('POST', 'auth/logout')
