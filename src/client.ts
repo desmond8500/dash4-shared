@@ -134,6 +134,7 @@ import type {
   UserFilters,
   UserPayload,
   Wrapped,
+  Backup,
   Cv,
   CvPayload,
   Conversation,
@@ -630,6 +631,23 @@ export function createApiClient(options: ApiClientOptions) {
       },
       async remove(messageId: number): Promise<void> {
         await request('DELETE', `messages/${messageId}`)
+      },
+    },
+
+    /** Sauvegardes (backups.manage, administrateurs). */
+    backups: {
+      async list(): Promise<{ data: Backup[]; meta: { keep_days: number } }> {
+        return request('GET', 'backups')
+      },
+      /** Sauvegarde immédiate de la base (et des fichiers avec `files`). */
+      async run(files = false): Promise<{ database: string; files: string | null }> {
+        return (await request<Wrapped<{ database: string; files: string | null }>>('POST', 'backups', { files })).data
+      },
+      download(name: string): Promise<Blob> {
+        return requestBlob(`backups/${encodeURIComponent(name)}`)
+      },
+      async remove(name: string): Promise<void> {
+        await request('DELETE', `backups/${encodeURIComponent(name)}`)
       },
     },
 

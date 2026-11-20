@@ -2702,3 +2702,12 @@ export interface MessagingUser {
   job_title: string | null
   avatar_url: string | null
 }
+
+// ─── Sauvegardes ───────────────────────────────────────────────────────────────
+
+export interface Backup {
+  name: string
+  kind: 'database' | 'files'
+  size: number
+  created_at: string
+}
