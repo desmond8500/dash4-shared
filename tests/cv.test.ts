@@ -28,3 +28,13 @@ describe('CV', () => {
     expect(cvSectionHasLevel('skills')).toBe(true)
   })
 })
+
+describe('préférences', () => {
+  it('applique le thème sombre selon le choix ou l’appareil', async () => {
+    const { isDarkTheme } = await import('../src/types.js')
+    expect(isDarkTheme('dark', false)).toBe(true)
+    expect(isDarkTheme('light', true)).toBe(false)
+    expect(isDarkTheme('system', true)).toBe(true)
+    expect(isDarkTheme(undefined, false)).toBe(false)
+  })
+})

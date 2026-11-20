@@ -47,6 +47,8 @@ export interface User {
 /** Utilisateur connecté : les permissions sont toujours présentes. */
 export interface CurrentUser extends User {
   permissions: string[]
+  /** Préférences de l'espace personnel (absentes d'une ancienne API). */
+  preferences?: UserPreferences
 }
 
 export interface Role {
@@ -2563,6 +2565,39 @@ export interface ProfilePayload {
   lastname?: string
   phone?: string | null
   job_title?: string | null
+  /** Changements seulement : fusionnés avec les préférences enregistrées. */
+  preferences?: { theme?: Theme; notifications?: Partial<Record<NotificationCategory, boolean>> }
+}
+
+export type Theme = 'system' | 'light' | 'dark'
+
+export type NotificationCategory = 'mentions' | 'tasks' | 'requests' | 'tech' | 'expenses' | 'stock' | 'contracts'
+
+export interface UserPreferences {
+  theme: Theme
+  notifications: Record<NotificationCategory, boolean>
+}
+
+export const THEMES: { value: Theme; label: string }[] = [
+  { value: 'system', label: 'Comme l’appareil' },
+  { value: 'light', label: 'Clair' },
+  { value: 'dark', label: 'Sombre' },
+]
+
+/** Catégories de notifications que l'on peut couper (les alertes de sécurité restent toujours actives). */
+export const NOTIFICATION_CATEGORIES: { value: NotificationCategory; label: string }[] = [
+  { value: 'mentions', label: 'Mentions dans les commentaires' },
+  { value: 'tasks', label: 'Tâches qui me sont confiées' },
+  { value: 'requests', label: 'Demandes clients' },
+  { value: 'tech', label: 'Espace technicien (informations, demandes d’accès)' },
+  { value: 'expenses', label: 'Dépenses' },
+  { value: 'stock', label: 'Stock bas' },
+  { value: 'contracts', label: 'Contrats de maintenance' },
+]
+
+/** Le thème sombre s'applique-t-il ? (`system` : selon l'appareil) */
+export function isDarkTheme(theme: Theme | undefined, systemPrefersDark: boolean): boolean {
+  return theme === 'dark' || ((theme ?? 'system') === 'system' && systemPrefersDark)
 }
 
 export interface PasswordPayload {
