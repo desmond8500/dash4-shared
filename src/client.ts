@@ -880,8 +880,9 @@ export function createApiClient(options: ApiClientOptions) {
         return (await request<Wrapped<InboundEmail>>('GET', `inbound-emails/${id}`)).data
       },
       /** Relève la boîte tout de suite. */
-      async fetch(): Promise<{ imported: number; skipped: number }> {
-        return (await request<Wrapped<{ imported: number; skipped: number }>>('POST', 'inbound-emails/fetch')).data
+      /** `failed` : e-mails illisibles, laissés non lus dans la boîte mail. */
+      async fetch(): Promise<{ imported: number; skipped: number; failed: number }> {
+        return (await request<Wrapped<{ imported: number; skipped: number; failed: number }>>('POST', 'inbound-emails/fetch')).data
       },
       async convert(id: number, payload: { client_id?: number | null; body?: string; priority?: Priority; assigned_to?: number | null } = {}): Promise<{ email: InboundEmail; request: ClientRequest }> {
         return (await request<Wrapped<{ email: InboundEmail; request: ClientRequest }>>('POST', `inbound-emails/${id}/convert`, payload)).data
