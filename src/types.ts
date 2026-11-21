@@ -1306,6 +1306,7 @@ export interface Article {
   min_quantity: number | null
   is_low: boolean
   storage_location_id: number | null
+  plan_icon_id?: number | null
   storage_location?: { id: number; name: string; code: string | null } | null
   /** Nom de l'emplacement. */
   location: string | null
@@ -1355,6 +1356,8 @@ export interface ArticlePayload {
   coefficient?: number
   min_quantity?: number | null
   storage_location_id?: number | null
+  /** Icône sur les plans (ses équipements la prennent). */
+  plan_icon_id?: number | null
   weight?: number | null
   is_active?: boolean
   /** À la création : enregistrée comme un inventaire. */
@@ -2126,7 +2129,7 @@ export interface Equipment {
   description: string | null
   position: number
   article_id: number | null
-  article?: { id: number; designation: string; reference: string | null } | null
+  article?: { id: number; designation: string; reference: string | null; plan_icon_id?: number | null } | null
   level_id: number | null
   room_id: number | null
   updated_at: string | null
@@ -2268,12 +2271,41 @@ export interface PlanMarker {
   id: number
   client_uuid: string | null
   equipment_id: number | null
+  /** Icône choisie sur le repère (sinon celle de l'article). */
+  plan_icon_id: number | null
+  /** Calque choisi sur le repère (sinon le système de l'équipement). */
+  installed_system_id: number | null
+  /** Icône affichée : celle du repère, sinon celle de l'article de l'équipement. */
+  icon_id: number | null
+  /** Calque : système installé, ou null (« Sans système »). */
+  layer_id: number | null
   page: number
   /** Position relative, de 0 (gauche / haut) à 1 (droite / bas). */
   x: number
   y: number
+  /** Taille : part de la largeur du plan (0,03 = 3 %). */
+  size: number
+  /** Rotation en degrés (0 à 359). */
+  rotation: number
   label: string | null
+  show_label: boolean
   color: string | null
+}
+
+export interface PlanSettings {
+  /** Calques masqués : identifiants de systèmes en texte, `none` pour les repères sans système. */
+  hidden_layers: string[]
+  legend: boolean
+  labels: boolean
+}
+
+/** Aperçu d'une page (plan, repères visibles, légende) envoyé par l'éditeur, utilisé dans les PDF. */
+export interface PlanRender {
+  page: number
+  path: string
+  width: number | null
+  height: number | null
+  updated_at: string | null
 }
 
 export interface Plan {
@@ -2288,6 +2320,8 @@ export interface Plan {
   position: number
   /** Fichier privé : à télécharger avec le jeton (`api.plans.file`). */
   download_path: string
+  settings: PlanSettings
+  renders: PlanRender[]
   markers?: PlanMarker[]
   updated_at: string | null
 }
@@ -2298,7 +2332,32 @@ export interface PlanMarkerPayload {
   y?: number
   page?: number
   equipment_id?: number | null
+  plan_icon_id?: number | null
+  installed_system_id?: number | null
+  size?: number
+  rotation?: number
   label?: string | null
+  show_label?: boolean
+  color?: string | null
+}
+
+/** Icône de la bibliothèque des plans : symbole intégré (`symbol`) ou image (`file_path`, jeton requis). */
+export interface PlanIcon {
+  id: number
+  name: string
+  category: string | null
+  symbol: string | null
+  color: string | null
+  file_path: string | null
+  mime: string | null
+  articles_count: number | null
+  updated_at: string | null
+}
+
+export interface PlanIconPayload {
+  name?: string
+  category?: string | null
+  symbol?: string | null
   color?: string | null
 }
 

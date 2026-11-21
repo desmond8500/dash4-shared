@@ -1,4 +1,7 @@
 import type {
+  PlanIcon,
+  PlanIconPayload,
+  PlanSettings,
   Vehicle,
   VehicleFilters,
   VehiclePayload,
@@ -434,6 +437,27 @@ export function createApiClient(options: ApiClientOptions) {
     },
 
     /** Suivi de chantier d'un projet (`sites.*`) ; chaque modification renvoie le chantier complet. */
+    /** Bibliothèque d'icônes des plans. */
+    planIcons: {
+      async list(): Promise<PlanIcon[]> {
+        return (await request<Wrapped<PlanIcon[]>>('GET', 'plan-icons')).data
+      },
+      async create(payload: PlanIconPayload & { name: string }, image?: Blob, filename?: string): Promise<PlanIcon> {
+        return (await request<Wrapped<PlanIcon>>('POST', 'plan-icons', image ? toForm(payload, image, filename ?? 'icone.png') : payload)).data
+      },
+      async update(id: number, payload: PlanIconPayload, image?: Blob, filename?: string): Promise<PlanIcon> {
+        return image
+          ? (await request<Wrapped<PlanIcon>>('POST', `plan-icons/${id}`, toForm(payload, image, filename ?? 'icone.png'))).data
+          : (await request<Wrapped<PlanIcon>>('PATCH', `plan-icons/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `plan-icons/${id}`)
+      },
+      file(icon: Pick<PlanIcon, 'file_path'>): Promise<Blob> {
+        return requestBlob(icon.file_path!)
+      },
+    },
+
     sites: {
       async get(projectId: number): Promise<Site> {
         return (await request<Wrapped<Site>>('GET', `projects/${projectId}/site`)).data
@@ -519,8 +543,21 @@ export function createApiClient(options: ApiClientOptions) {
         if (extra.level_id) form.append('level_id', String(extra.level_id))
         return (await request<Wrapped<Plan>>('POST', `projects/${projectId}/plans`, form)).data
       },
-      async update(id: number, payload: { name?: string; building_id?: number | null; level_id?: number | null; position?: number }): Promise<Plan> {
+      async update(id: number, payload: { name?: string; building_id?: number | null; level_id?: number | null; position?: number; settings?: Partial<PlanSettings> }): Promise<Plan> {
         return (await request<Wrapped<Plan>>('PATCH', `plans/${id}`, payload)).data
+      },
+      /** Aperçu d'une page (plan, repères visibles, légende) : c'est lui qui va dans les PDF. */
+      async uploadRender(id: number, page: number, image: Blob, size: { width: number; height: number }): Promise<Plan> {
+        const form = new FormData()
+        form.append('file', image, `plan-${id}-${page}.${image.type === 'image/png' ? 'png' : 'jpg'}`)
+        form.append('page', String(page))
+        form.append('width', String(size.width))
+        form.append('height', String(size.height))
+        return (await request<Wrapped<Plan>>('POST', `plans/${id}/render`, form)).data
+      },
+      /** PDF du plan : pages avec repères et légende, puis la liste des repères. */
+      pdf(id: number): Promise<Blob> {
+        return requestBlob(`plans/${id}/pdf`)
       },
       async remove(id: number): Promise<void> {
         await request('DELETE', `plans/${id}`)
