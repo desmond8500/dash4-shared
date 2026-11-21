@@ -427,6 +427,7 @@ export interface AppNotification {
   tech_access_request_id?: number
   comment_id?: number
   contract_id?: number
+  vehicle_id?: number
   invoice_id?: number
   /** Fiche concernée (mention dans un commentaire). */
   subject_type?: CommentableType
