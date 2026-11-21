@@ -14,7 +14,7 @@ function safeUrl(url: string): string | null {
   return /^(https?:\/\/|mailto:)/i.test(u) ? u : null
 }
 
-function inline(text: string): string {
+function inline(text: string, mentions: string[] = []): string {
   // Code en premier : son contenu n'est plus interprété
   const codes: string[] = []
   let s = escapeHtml(text).replace(/`([^`]+)`/g, (_, c: string) => {
@@ -25,6 +25,11 @@ function inline(text: string): string {
   const keep = (html: string) => {
     links.push(html)
     return `\u0001${links.length - 1}\u0001`
+  }
+  // Mentions « @Prénom Nom » (les noms les plus longs d'abord)
+  for (const name of [...mentions].sort((a, b) => b.length - a.length)) {
+    const tag = `@${escapeHtml(name)}`
+    s = s.split(tag).join(keep(`<span class="mention">${tag}</span>`))
   }
   // [texte](url)
   s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, label: string, url: string) => {
@@ -46,7 +51,14 @@ function inline(text: string): string {
 type Block = { kind: 'p' | 'h1' | 'h2' | 'h3' | 'quote' | 'ul' | 'ol' | 'hr'; lines: string[] }
 
 /** Texte Markdown → HTML sûr (à afficher avec v-html). Texte vide → ''. */
-export function renderMarkdown(text: string | null | undefined): string {
+export interface MarkdownOptions {
+  /** Noms complets cités (« @Prénom Nom ») à mettre en valeur. */
+  mentions?: string[]
+}
+
+export function renderMarkdown(text: string | null | undefined, options: MarkdownOptions = {}): string {
+  const mentions = options.mentions ?? []
+  const inl = (t: string) => inline(t, mentions)
   if (!text || !text.trim()) return ''
   const blocks: Block[] = []
   const state: { current: Block | null } = { current: null }
@@ -86,7 +98,7 @@ export function renderMarkdown(text: string | null | undefined): string {
   }
   const item = (l: string) => {
     const box = l.match(/^\[( |x|X)\]\s+(.*)$/s)
-    const body = inline(box ? box[2]! : l).replace(/\n/g, '<br>')
+    const body = inl(box ? box[2]! : l).replace(/\n/g, '<br>')
     return box ? `<li class="md-task"><input type="checkbox" disabled${box[1] !== ' ' ? ' checked' : ''}> ${body}</li>` : `<li>${body}</li>`
   }
   return blocks
@@ -97,15 +109,15 @@ export function renderMarkdown(text: string | null | undefined): string {
         case 'h1':
         case 'h2':
         case 'h3':
-          return `<${b.kind}>${inline(b.lines[0]!)}</${b.kind}>`
+          return `<${b.kind}>${inl(b.lines[0]!)}</${b.kind}>`
         case 'quote':
-          return `<blockquote>${b.lines.map(inline).join('<br>')}</blockquote>`
+          return `<blockquote>${b.lines.map(inl).join('<br>')}</blockquote>`
         case 'ul':
           return `<ul>${b.lines.map(item).join('')}</ul>`
         case 'ol':
           return `<ol>${b.lines.map(item).join('')}</ol>`
         default:
-          return `<p>${b.lines.map(inline).join('<br>')}</p>`
+          return `<p>${b.lines.map(inl).join('<br>')}</p>`
       }
     })
     .join('')

@@ -43,3 +43,11 @@ describe('applyMarkdown', () => {
     expect(applyMarkdown('a\nb', 0, 3, 'ol').text).toBe('1. a\n2. b')
   })
 })
+
+describe('renderMarkdown avec mentions', () => {
+  it('met en valeur les personnes citées', () => {
+    expect(renderMarkdown('Merci @Awa Diop et **@Awa**', { mentions: ['Awa Diop', 'Awa'] })).toBe(
+      '<p>Merci <span class="mention">@Awa Diop</span> et <strong><span class="mention">@Awa</span></strong></p>',
+    )
+  })
+})
