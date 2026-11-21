@@ -1,4 +1,11 @@
 import type {
+  Vehicle,
+  VehicleFilters,
+  VehiclePayload,
+  VehiclePaperPayload,
+  VehicleMileagePayload,
+  VehicleMaintenancePayload,
+  VehicleOptions,
   EmailSignature,
   EmailSignatureList,
   DeliveryNotePayload,
@@ -769,6 +776,54 @@ export function createApiClient(options: ApiClientOptions) {
     },
 
     /** Contrats de maintenance (`contracts.*`) et forfaits. */
+    /** Parc automobile : véhicules et scooters, papiers, kilométrage, entretiens. */
+    vehicles: {
+      async list(filters: VehicleFilters = {}): Promise<Vehicle[]> {
+        const { alerts, ...rest } = filters
+        return (await request<Wrapped<Vehicle[]>>('GET', 'vehicles', undefined, { ...rest, ...(alerts ? { alerts: 1 } : {}) })).data
+      },
+      async options(): Promise<VehicleOptions> {
+        return (await request<Wrapped<VehicleOptions>>('GET', 'vehicles/options')).data
+      },
+      async get(id: number): Promise<Vehicle> {
+        return (await request<Wrapped<Vehicle>>('GET', `vehicles/${id}`)).data
+      },
+      async create(payload: VehiclePayload & { name: string; kind: Vehicle['kind']['value'] }): Promise<Vehicle> {
+        return (await request<Wrapped<Vehicle>>('POST', 'vehicles', payload)).data
+      },
+      async update(id: number, payload: VehiclePayload): Promise<Vehicle> {
+        return (await request<Wrapped<Vehicle>>('PATCH', `vehicles/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `vehicles/${id}`)
+      },
+      async addPaper(id: number, payload: VehiclePaperPayload & { type: NonNullable<VehiclePaperPayload['type']> }): Promise<Vehicle> {
+        return (await request<Wrapped<Vehicle>>('POST', `vehicles/${id}/papers`, payload)).data
+      },
+      async updatePaper(id: number, paperId: number, payload: VehiclePaperPayload): Promise<Vehicle> {
+        return (await request<Wrapped<Vehicle>>('PATCH', `vehicles/${id}/papers/${paperId}`, payload)).data
+      },
+      async removePaper(id: number, paperId: number): Promise<Vehicle> {
+        return (await request<Wrapped<Vehicle>>('DELETE', `vehicles/${id}/papers/${paperId}`)).data
+      },
+      /** Relevé du compteur (aussi par le conducteur attitré). */
+      async addMileage(id: number, payload: VehicleMileagePayload): Promise<Vehicle> {
+        return (await request<Wrapped<Vehicle>>('POST', `vehicles/${id}/mileages`, payload)).data
+      },
+      async removeMileage(id: number, mileageId: number): Promise<Vehicle> {
+        return (await request<Wrapped<Vehicle>>('DELETE', `vehicles/${id}/mileages/${mileageId}`)).data
+      },
+      async addMaintenance(id: number, payload: VehicleMaintenancePayload & { type: NonNullable<VehicleMaintenancePayload['type']>; done_on: string }): Promise<Vehicle> {
+        return (await request<Wrapped<Vehicle>>('POST', `vehicles/${id}/maintenances`, payload)).data
+      },
+      async updateMaintenance(id: number, maintenanceId: number, payload: VehicleMaintenancePayload): Promise<Vehicle> {
+        return (await request<Wrapped<Vehicle>>('PATCH', `vehicles/${id}/maintenances/${maintenanceId}`, payload)).data
+      },
+      async removeMaintenance(id: number, maintenanceId: number): Promise<Vehicle> {
+        return (await request<Wrapped<Vehicle>>('DELETE', `vehicles/${id}/maintenances/${maintenanceId}`)).data
+      },
+    },
+
     contracts: {
       list(filters: ContractFilters = {}): Promise<Paginated<Contract>> {
         const { due, ending, ...rest } = filters

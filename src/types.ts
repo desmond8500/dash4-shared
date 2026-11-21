@@ -383,7 +383,7 @@ export interface Assignee {
 // ---------------------------------------------------------------------------
 
 /** Fiches qui ont un fil de commentaires. */
-export type CommentableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'tech-shares' | 'installed-systems' | 'equipment' | 'reception-reports' | 'contracts'
+export type CommentableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'tech-shares' | 'installed-systems' | 'equipment' | 'reception-reports' | 'contracts' | 'vehicles'
 
 export interface Comment {
   id: number
@@ -458,7 +458,7 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
 export const ACTIVE_PROJECT_STATUSES: ProjectStatus[] = ['planned', 'in_progress', 'on_hold']
 
 /** Fiches qui acceptent notes, liens et documents (segment de l'adresse de l'API). */
-export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'journal-sections' | 'tech-shares' | 'comments' | 'buildings' | 'installed-systems' | 'equipment' | 'reception-reports' | 'sheets' | 'contracts' | 'messages'
+export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'journal-sections' | 'tech-shares' | 'comments' | 'buildings' | 'installed-systems' | 'equipment' | 'reception-reports' | 'sheets' | 'contracts' | 'messages' | 'vehicles' | 'vehicle-papers'
 
 export interface Note {
   id: number
@@ -1517,6 +1517,8 @@ export interface Expense {
   /** Article du stock acheté (facultatif). */
   article_id?: number | null
   article?: { id: number; designation: string; reference: string | null } | null
+  vehicle_id?: number | null
+  vehicle?: { id: number; name: string; plate: string | null } | null
   payment_method: Labelled<PaymentMethod> | null
   /** Payée avec son propre argent : à lui rembourser. */
   advanced: boolean
@@ -1542,6 +1544,7 @@ export interface ExpenseFilters extends SyncFilters {
   to_reimburse?: boolean
   expense_space_id?: number
   project_id?: number
+  vehicle_id?: number
   quote_id?: number
   expense_category_id?: number
   created_by?: number
@@ -1562,6 +1565,7 @@ export interface ExpensePayload {
   quote_id?: number | null
   provider_id?: number | null
   article_id?: number | null
+  vehicle_id?: number | null
   payment_method?: PaymentMethod | null
   advanced?: boolean
   is_paid?: boolean
@@ -2592,7 +2596,7 @@ export interface ProfilePayload {
 
 export type Theme = 'system' | 'light' | 'dark'
 
-export type NotificationCategory = 'mentions' | 'tasks' | 'requests' | 'tech' | 'expenses' | 'stock' | 'contracts' | 'invoices'
+export type NotificationCategory = 'mentions' | 'tasks' | 'requests' | 'tech' | 'expenses' | 'stock' | 'contracts' | 'invoices' | 'fleet'
 
 export interface UserPreferences {
   theme: Theme
@@ -2615,6 +2619,7 @@ export const NOTIFICATION_CATEGORIES: { value: NotificationCategory; label: stri
   { value: 'stock', label: 'Stock bas' },
   { value: 'contracts', label: 'Contrats de maintenance' },
   { value: 'invoices', label: 'Factures à relancer' },
+  { value: 'fleet', label: 'Parc automobile (papiers, entretiens)' },
 ]
 
 /** Le thème sombre s'applique-t-il ? (`system` : selon l'appareil) */
@@ -2804,4 +2809,193 @@ export interface ContractVisit {
   number: number
   planned_on: string | null
   task: { id: number; title: string; status: LabelledValue<TaskStatus> } | null
+}
+
+// --- Parc automobile ------------------------------------------------------------------------
+
+export type VehicleKind = 'car' | 'utility' | 'truck' | 'scooter' | 'motorcycle' | 'other'
+export type VehicleFuel = 'petrol' | 'diesel' | 'hybrid' | 'electric' | 'other'
+export type VehicleStatus = 'active' | 'repair' | 'out_of_service' | 'sold'
+export type VehiclePaperType = 'insurance' | 'registration' | 'cmc' | 'inspection' | 'tax' | 'license' | 'other'
+export type MaintenanceType = 'oil_change' | 'service' | 'tyres' | 'brakes' | 'battery' | 'repair' | 'other'
+/** État d'un papier : `soon` = expire dans les 30 jours. */
+export type PaperState = 'ok' | 'soon' | 'expired'
+/** État d'un entretien prévu : `soon` = dans les 15 jours ou 500 km. */
+export type ServiceState = 'ok' | 'soon' | 'late'
+
+export interface VehicleCharacteristic {
+  label: string
+  value: string | null
+}
+
+export interface VehiclePaper {
+  id: number
+  type: LabelledValue<VehiclePaperType>
+  label: string | null
+  /** Intitulé affiché : `label`, sinon le type. */
+  title: string
+  number: string | null
+  provider: string | null
+  issued_on: string | null
+  expires_on: string | null
+  state: PaperState | null
+  /** Le plus récent de son type (les plus anciens sont l'historique). */
+  current: boolean
+  notes: string | null
+  documents_count: number | null
+  /** Avec `costs.view` seulement. */
+  cost?: number | null
+}
+
+export interface VehicleMileage {
+  id: number
+  read_on: string
+  km: number
+  note: string | null
+  creator: UserRef | null
+}
+
+export interface VehicleMaintenance {
+  id: number
+  type: LabelledValue<MaintenanceType>
+  done_on: string
+  km: number | null
+  description: string | null
+  garage: string | null
+  next_on: string | null
+  next_km: number | null
+  /** Dépense créée pour cet entretien. */
+  expense_id: number | null
+  cost?: number | null
+}
+
+export interface VehicleUpcoming {
+  type: MaintenanceType
+  label: string
+  next_on: string | null
+  next_km: number | null
+  state: ServiceState
+  maintenance_id: number | null
+}
+
+export interface VehicleAlert {
+  kind: 'paper' | 'maintenance'
+  state: PaperState | ServiceState
+  label: string
+  date: string | null
+}
+
+export interface VehicleCosts {
+  papers: number
+  maintenance: number
+  expenses: number
+  total: number
+  this_year: number
+}
+
+export interface Vehicle {
+  id: number
+  kind: LabelledValue<VehicleKind>
+  name: string
+  brand: string | null
+  model: string | null
+  plate: string | null
+  vin: string | null
+  year: number | null
+  color: string | null
+  fuel: LabelledValue<VehicleFuel> | null
+  fiscal_power: number | null
+  seats: number | null
+  status: LabelledValue<VehicleStatus>
+  driver_id: number | null
+  driver?: UserRef | null
+  acquired_on: string | null
+  /** Avec `costs.view` seulement. */
+  purchase_price?: number | null
+  mileage: number
+  service_interval_km: number | null
+  service_interval_months: number | null
+  characteristics: VehicleCharacteristic[]
+  notes: string | null
+  alerts?: VehicleAlert[]
+  papers?: VehiclePaper[]
+  mileages?: VehicleMileage[]
+  maintenances?: VehicleMaintenance[]
+  upcoming?: VehicleUpcoming[]
+  costs?: VehicleCosts
+  can: { update: boolean; delete: boolean; record_mileage: boolean }
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface VehicleFilters {
+  kind?: VehicleKind
+  status?: VehicleStatus
+  driver_id?: number
+  /** Seulement les véhicules avec un papier ou un entretien à surveiller. */
+  alerts?: boolean
+  search?: string
+}
+
+export interface VehiclePayload {
+  kind?: VehicleKind
+  name?: string
+  brand?: string | null
+  model?: string | null
+  plate?: string | null
+  vin?: string | null
+  year?: number | null
+  color?: string | null
+  fuel?: VehicleFuel | null
+  fiscal_power?: number | null
+  seats?: number | null
+  status?: VehicleStatus
+  driver_id?: number | null
+  acquired_on?: string | null
+  purchase_price?: number | null
+  /** À la création seulement : premier relevé du compteur. */
+  mileage?: number
+  service_interval_km?: number | null
+  service_interval_months?: number | null
+  characteristics?: VehicleCharacteristic[]
+  notes?: string | null
+}
+
+export interface VehiclePaperPayload {
+  type?: VehiclePaperType
+  label?: string | null
+  number?: string | null
+  provider?: string | null
+  issued_on?: string | null
+  expires_on?: string | null
+  cost?: number | null
+  notes?: string | null
+}
+
+export interface VehicleMileagePayload {
+  km: number
+  read_on?: string
+  note?: string | null
+  client_uuid?: string
+}
+
+export interface VehicleMaintenancePayload {
+  type?: MaintenanceType
+  done_on?: string
+  km?: number | null
+  description?: string | null
+  garage?: string | null
+  cost?: number | null
+  next_on?: string | null
+  next_km?: number | null
+  /** Enregistre aussi le coût en dépense (validée) rattachée au véhicule. */
+  create_expense?: boolean
+}
+
+export interface VehicleOptions {
+  kinds: LabelledValue<VehicleKind>[]
+  fuels: LabelledValue<VehicleFuel>[]
+  statuses: LabelledValue<VehicleStatus>[]
+  paper_types: LabelledValue<VehiclePaperType>[]
+  maintenance_types: LabelledValue<MaintenanceType>[]
 }
