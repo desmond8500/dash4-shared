@@ -541,6 +541,10 @@ export function createApiClient(options: ApiClientOptions) {
 
     /** Plans d'un chantier (image ou PDF) et marqueurs d'équipements. */
     plans: {
+      /** Tous les plans des chantiers visibles, avec leur projet (consultation sur le mobile). */
+      async all(search?: string): Promise<Plan[]> {
+        return (await request<Wrapped<Plan[]>>('GET', 'plans', undefined, search ? { search } : {})).data
+      },
       async list(projectId: number): Promise<Plan[]> {
         return (await request<Wrapped<Plan[]>>('GET', `projects/${projectId}/plans`)).data
       },

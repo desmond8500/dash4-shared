@@ -2347,6 +2347,10 @@ export interface Plan {
   settings: PlanSettings
   renders: PlanRender[]
   markers?: PlanMarker[]
+  /** Liste de tous les plans (`api.plans.all`). */
+  project?: { id: number; name: string } | null
+  building?: { id: number; name: string } | null
+  level?: { id: number; name: string } | null
   updated_at: string | null
 }
 
