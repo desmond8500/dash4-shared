@@ -35,6 +35,15 @@ export const PLAN_SYMBOLS: PlanSymbol[] = [
   { key: 'socket', label: 'Prise', path: 'M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20z M8 10h2v4H8z M14 10h2v4h-2z' },
   { key: 'extinguisher', label: 'Extincteur', path: 'M8 7h8v15H8z M11 2h2v5h-2z M13 3h6v2h-6z' },
   { key: 'sprinkler', label: 'Sprinkler', path: 'M11 2h2v6h-2z M6 8h12v3H6z M12 13l3 9H9z M3 14l3-1 1 2-3 1z M21 14l-3-1-1 2 3 1z' },
+  { key: 'rounded', label: 'Carré arrondi', path: 'M7 3h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4z' },
+  { key: 'rect', label: 'Rectangle (étiquette)', path: 'M1 6h22v12H1z' },
+  { key: 'beacon', label: "Indicateur d'action", path: 'M4 20h16v2H4z M6.5 19a5.5 5.5 0 0 1 11 0z M11 2h2v5h-2z M3.3 6.7l1.4-1.4 3 3-1.4 1.4z M16.3 8.3l3-3 1.4 1.4-3 3z' },
+  { key: 'monitor', label: 'Moniteur', path: 'M2 3h20v14H2z M4.5 5.5h15v9h-15z M9 18h6v3H9z' },
+  { key: 'maglock', label: 'Ventouse', path: 'M2 8h20v8H2z M5 10.5h6v3H5z' },
+  { key: 'phone', label: 'Téléphone', path: 'M6 2h4l1.5 5-2.5 2a12 12 0 0 0 6 6l2-2.5 5 1.5v4a2 2 0 0 1-2 2A18 18 0 0 1 4 4a2 2 0 0 1 2-2z' },
+  { key: 'hose_reel', label: 'Robinet incendie armé', path: 'M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20z M12 6a6 6 0 1 1 0 12a6 6 0 1 1 0-12z M12 9.5a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5z M18 18l4 4-1.5 1.5-4-4z' },
+  { key: 'assembly', label: 'Point de rassemblement', path: 'M2 2h20v20H2z M4 4v16h16V4z M6 6h4l-1.3 1.3 2.3 2.3-1.4 1.4-2.3-2.3L6 10z M18 6v4l-1.3-1.3-2.3 2.3-1.4-1.4 2.3-2.3L14 6z M6 18v-4l1.3 1.3 2.3-2.3 1.4 1.4-2.3 2.3L10 18z M18 18h-4l1.3-1.3-2.3-2.3 1.4-1.4 2.3 2.3L18 14z' },
+  { key: 'exit', label: 'Sortie de secours', path: 'M1 5h22v14H1z M3 7v10h18V7z M13 8.5a1.5 1.5 0 1 0 0 3a1.5 1.5 0 1 0 0-3z M11 12h3l2 2h2v1.5h-2.6L14 14.2l-.8 2.3 1.8 1.5H13l-1.6-1.3-1.4 1.3H8l2.2-2.2.8-2.3-1.2.6V15H8.5v-2z' },
 ]
 
 const BY_KEY = new Map(PLAN_SYMBOLS.map((s) => [s.key, s]))
@@ -42,6 +51,20 @@ const BY_KEY = new Map(PLAN_SYMBOLS.map((s) => [s.key, s]))
 /** Symbole par sa clé, ou le rond par défaut. */
 export function planSymbol(key: string | null | undefined): PlanSymbol {
   return (key && BY_KEY.get(key)) || PLAN_SYMBOLS[0]!
+}
+
+/** Formes larges : le code s'y écrit sur toute la largeur. */
+const WIDE = new Set(['rect', 'exit'])
+
+/**
+ * Taille du code écrit dans une icône (unités du carré de 24) : plus le code est long, plus il est petit.
+ * 0 sans code.
+ */
+export function codeFontSize(code: string | null | undefined, symbol: string | null | undefined): number {
+  const len = code?.trim().length ?? 0
+  if (!len) return 0
+  const box = WIDE.has(symbol ?? '') ? 21 : 16.5
+  return Math.round(Math.min(10, (box * 1.6) / Math.max(2, len)) * 10) / 10
 }
 
 /** Couleur d'un repère : la sienne, sinon celle de l'icône, sinon le rouge par défaut. */
@@ -87,6 +110,38 @@ export interface LegendEntry {
   color: string
   name: string
   count: number
+  /** Catégorie de l'icône (« Autres repères » sans icône). */
+  category: string
+}
+
+export interface LegendGroup {
+  category: string
+  entries: LegendEntry[]
+  count: number
+}
+
+/** Catégories de la bibliothèque standard, dans l'ordre des légendes. */
+export const PLAN_ICON_CATEGORIES = [
+  'Détection incendie',
+  'Extincteurs',
+  'Évacuation et signalisation',
+  'Vidéosurveillance',
+  "Contrôle d'accès",
+  'Intrusion',
+  'RIA et colonnes',
+  'Réseau et courants faibles',
+]
+
+export const OTHER_MARKERS = 'Autres repères'
+
+/** Légende rangée par catégorie (ordre de la bibliothèque standard, puis alphabétique, « Autres repères » à la fin). */
+export function groupLegend(entries: LegendEntry[]): LegendGroup[] {
+  const groups = new Map<string, LegendEntry[]>()
+  for (const e of entries) groups.set(e.category, [...(groups.get(e.category) ?? []), e])
+  const rank = (c: string) => (c === OTHER_MARKERS ? 1000 : PLAN_ICON_CATEGORIES.includes(c) ? PLAN_ICON_CATEGORIES.indexOf(c) : 100)
+  return [...groups.entries()]
+    .sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b, 'fr'))
+    .map(([category, list]) => ({ category, entries: list, count: list.reduce((n, e) => n + e.count, 0) }))
 }
 
 /**
@@ -106,9 +161,9 @@ export function planLegend(
     const key = icon ? `i${icon.id}|${icon.file_path ? '' : color}` : `c${color}|${equipmentName(m.equipment_id) ?? m.label ?? ''}`
     const entry = entries.get(key)
     if (entry) entry.count++
-    else entries.set(key, { key, icon, color, name: icon?.name ?? equipmentName(m.equipment_id) ?? m.label ?? 'Repère', count: 1 })
+    else entries.set(key, { key, icon, color, name: icon?.name ?? equipmentName(m.equipment_id) ?? m.label ?? 'Repère', count: 1, category: icon ? (icon.category || OTHER_MARKERS) : OTHER_MARKERS })
   }
-  return [...entries.values()].sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+  return [...entries.values()].sort((a, b) => (a.icon?.position ?? 0) - (b.icon?.position ?? 0) || a.name.localeCompare(b.name, 'fr'))
 }
 
 /** Angle ramené entre 0 et 359. */

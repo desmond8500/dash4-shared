@@ -453,6 +453,11 @@ export function createApiClient(options: ApiClientOptions) {
       async remove(id: number): Promise<void> {
         await request('DELETE', `plan-icons/${id}`)
       },
+      /** Ajoute la bibliothèque standard (légende de l'entreprise) ; `reset` remet les icônes standard à neuf. */
+      async install(reset = false): Promise<{ created: number; updated: number; unchanged: number; message: string }> {
+        const r = await request<{ data: { created: number; updated: number; unchanged: number }; message: string }>('POST', 'plan-icons/install', { reset })
+        return { ...r.data, message: r.message }
+      },
       file(icon: Pick<PlanIcon, 'file_path'>): Promise<Blob> {
         return requestBlob(icon.file_path!)
       },

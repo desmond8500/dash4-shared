@@ -2344,10 +2344,18 @@ export interface PlanMarkerPayload {
 /** Icône de la bibliothèque des plans : symbole intégré (`symbol`) ou image (`file_path`, jeton requis). */
 export interface PlanIcon {
   id: number
+  /** Clé d'une icône de la bibliothèque standard (sinon null). */
+  slug?: string | null
   name: string
   category: string | null
   symbol: string | null
+  /** Texte écrit dans la forme (DOF, CDI, NC2…), comme sur les légendes des plans. */
+  code?: string | null
   color: string | null
+  text_color?: string | null
+  /** Seconde couleur, moitié basse de la forme (extincteurs). */
+  secondary_color?: string | null
+  position?: number
   file_path: string | null
   mime: string | null
   articles_count: number | null
@@ -2358,7 +2366,11 @@ export interface PlanIconPayload {
   name?: string
   category?: string | null
   symbol?: string | null
+  code?: string | null
   color?: string | null
+  text_color?: string | null
+  secondary_color?: string | null
+  position?: number
 }
 
 export interface QuantityRow {
