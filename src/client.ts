@@ -517,6 +517,10 @@ export function createApiClient(options: ApiClientOptions) {
       async updateEquipment(id: number, payload: EquipmentPayload): Promise<Site> {
         return (await request<Wrapped<Site>>('PATCH', `equipment/${id}`, payload)).data
       },
+      /** Éclate un groupe (quantité N) en N appareils de quantité 1, avec les mêmes informations. */
+      async splitEquipment(id: number): Promise<Site> {
+        return (await request<Wrapped<Site>>('POST', `equipment/${id}/split`)).data
+      },
       async removeEquipment(id: number): Promise<Site> {
         return (await request<Wrapped<Site>>('DELETE', `equipment/${id}`)).data
       },

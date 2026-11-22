@@ -38,3 +38,19 @@ describe('plans et quantitatifs', () => {
     ])).toEqual([{ designation: 'Détecteur', unit: null, quantity: 6 }, { designation: 'Câble', unit: 'm', quantity: 12.5 }])
   })
 })
+
+describe('éclater un groupe d’équipements', () => {
+  it('garde les informations, retire le n° de série des copies et les place après l’original', async () => {
+    const { splitEquipmentLocally } = await import('../src/site')
+    const base = { name: 'Caméra', serial_number: 'SN', characteristics: [{ label: 'IP', value: '1' }], parent_id: null }
+    const site = { systems: [{ id: 1, equipment: [{ ...base, id: 1, quantity: 3 }, { ...base, id: 2, name: 'NVR', quantity: 1 }] }] } as never
+    const out = splitEquipmentLocally(site, 1, (i) => -i) as unknown as { systems: Array<{ equipment: Array<{ id: number; quantity: number; serial_number: string | null; name: string }> }> }
+    expect(out.systems[0]!.equipment.map((e) => [e.id, e.name, e.quantity, e.serial_number])).toEqual([
+      [1, 'Caméra', 1, 'SN'],
+      [-1, 'Caméra', 1, null],
+      [-2, 'Caméra', 1, null],
+      [2, 'NVR', 1, 'SN'],
+    ])
+    expect(splitEquipmentLocally(out as never, 1, (i) => -10 - i)).toEqual(out)
+  })
+})

@@ -63,3 +63,21 @@ export function quantityTotals(rows: Array<{ article_id: number | null; designat
   }
   return [...totals.values()]
 }
+
+/**
+ * Éclatement d'un groupe, comme l'API : l'original passe à 1 et des copies de quantité 1, sans n° de série,
+ * se placent juste après lui. `newId(i)` donne le numéro (provisoire) de la i-ème copie.
+ */
+export function splitEquipmentLocally(site: Site, id: number, newId: (i: number) => number): Site {
+  return {
+    ...site,
+    systems: site.systems.map((s) => {
+      const list = s.equipment ?? []
+      const index = list.findIndex((e) => e.id === id)
+      const item = list[index]
+      if (!item || item.quantity <= 1) return s
+      const copies = Array.from({ length: item.quantity - 1 }, (_, i) => ({ ...item, id: newId(i + 1), client_uuid: null, quantity: 1, serial_number: null, characteristics: item.characteristics.map((c) => ({ ...c })) }))
+      return { ...s, equipment: [...list.slice(0, index), { ...item, quantity: 1 }, ...copies, ...list.slice(index + 1)] }
+    }),
+  }
+}
