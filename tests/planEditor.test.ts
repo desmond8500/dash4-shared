@@ -57,7 +57,7 @@ describe('icônes à code et légende par catégorie', () => {
   it('écrit le code plus petit quand il est long, plus grand dans un rectangle', () => {
     expect(codeFontSize(null, 'dot')).toBe(0)
     expect(codeFontSize('DT', 'dot')).toBe(10)
-    expect(codeFontSize('DOF', 'dot')).toBe(8.8)
+    expect(codeFontSize('DOF', 'dot')).toBe(8)
     expect(codeFontSize('BAES', 'rect')).toBeGreaterThan(codeFontSize('BAES', 'dot'))
   })
 

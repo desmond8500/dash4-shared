@@ -58,13 +58,13 @@ const WIDE = new Set(['rect', 'exit'])
 
 /**
  * Taille du code écrit dans une icône (unités du carré de 24) : plus le code est long, plus il est petit.
- * 0 sans code.
+ * 0 sans code. Le texte se place à y = 12 + taille × 0,36 (centré sans dépendre de la ligne de base).
  */
 export function codeFontSize(code: string | null | undefined, symbol: string | null | undefined): number {
   const len = code?.trim().length ?? 0
   if (!len) return 0
-  const box = WIDE.has(symbol ?? '') ? 21 : 16.5
-  return Math.round(Math.min(10, (box * 1.6) / Math.max(2, len)) * 10) / 10
+  const room = WIDE.has(symbol ?? '') ? 21 * 1.6 : 16.5 * 1.45
+  return Math.round(Math.min(10, room / Math.max(2, len)) * 10) / 10
 }
 
 /** Couleur d'un repère : la sienne, sinon celle de l'icône, sinon le rouge par défaut. */
