@@ -1623,7 +1623,7 @@ export function createApiClient(options: ApiClientOptions) {
       async summary(filters: AccountingFilters = {}): Promise<AccountingSummary> {
         return (await request<Wrapped<AccountingSummary>>('GET', 'accounting/summary', undefined, { ...filters })).data
       },
-      ledger(filters: AccountingFilters & { direction?: 'in' | 'out'; source?: string; page?: number; per_page?: number } = {}): Promise<Paginated<LedgerEntry>> {
+      ledger(filters: AccountingFilters & { direction?: 'in' | 'out'; source?: string; search?: string; page?: number; per_page?: number } = {}): Promise<Paginated<LedgerEntry>> {
         return request('GET', 'accounting/ledger', undefined, { ...filters })
       },
     },
