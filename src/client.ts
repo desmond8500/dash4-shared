@@ -1,3 +1,4 @@
+import type { QuoteSitePayload } from './quoteSite.js'
 import type {
   PlanIcon,
   PlanIconPayload,
@@ -1164,6 +1165,11 @@ export function createApiClient(options: ApiClientOptions) {
       },
       async duplicate(id: number): Promise<Quote> {
         return (await request<Wrapped<Quote>>('POST', `quotes/${id}/duplicate`)).data
+      },
+      /** Crée les appareils du chantier du projet depuis les lignes du devis (seul le reste de chaque ligne). */
+      async toSite(id: number, payload: QuoteSitePayload): Promise<{ site: Site; created: number }> {
+        const res = await request<Wrapped<Site> & { meta: { created: number } }>('POST', `quotes/${id}/site-equipment`, payload)
+        return { site: res.data, created: res.meta?.created ?? 0 }
       },
       /** PDF du devis (logo, banque, signature et cachet). */
       pdf(id: number): Promise<Blob> {

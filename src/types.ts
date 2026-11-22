@@ -2142,6 +2142,8 @@ export interface Equipment {
   description: string | null
   position: number
   article_id: number | null
+  /** Ligne du devis dont l'appareil a été créé. */
+  quote_line_id?: number | null
   article?: { id: number; designation: string; reference: string | null; plan_icon_id?: number | null } | null
   level_id: number | null
   room_id: number | null
