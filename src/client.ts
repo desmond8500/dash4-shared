@@ -1190,6 +1190,15 @@ export function createApiClient(options: ApiClientOptions) {
       async addLine(sectionId: number, payload: QuoteLinePayload): Promise<Quote> {
         return (await request<Wrapped<Quote>>('POST', `quote-sections/${sectionId}/lines`, payload)).data
       },
+      /** Lie la ligne à un article du stock (null : la délie) sans changer la ligne ; possible sur un devis accepté. */
+      async linkArticle(lineId: number, articleId: number | null): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('PATCH', `quote-lines/${lineId}/article`, { article_id: articleId })).data
+      },
+      /** Lie les lignes sans article aux articles de même référence (ou désignation). */
+      async linkArticles(id: number): Promise<{ quote: Quote; linked: number; message: string }> {
+        const r = await request<{ data: Quote; linked: number; message: string }>('POST', `quotes/${id}/link-articles`)
+        return { quote: r.data, linked: r.linked, message: r.message }
+      },
       async updateLine(lineId: number, payload: Partial<QuoteLinePayload>): Promise<Quote> {
         return (await request<Wrapped<Quote>>('PATCH', `quote-lines/${lineId}`, payload)).data
       },

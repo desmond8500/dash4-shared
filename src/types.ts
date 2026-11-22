@@ -698,11 +698,24 @@ export const QUOTE_LINE_CATEGORY_LABELS: Record<QuoteLineCategory, string> = {
   other: 'Autre',
 }
 
+/** Article du stock lié à une ligne de devis (fiche consultable, photo). */
+export interface QuoteLineArticle {
+  id: number
+  designation: string
+  reference: string | null
+  image_url: string | null
+  quantity: number
+  unit: string | null
+  /** Article retiré du stock depuis. */
+  deleted: boolean
+}
+
 export interface QuoteLine {
   id: number
   quote_section_id: number
   position: number
   article_id: number | null
+  article?: QuoteLineArticle | null
   designation: string
   reference: string | null
   comment: string | null
