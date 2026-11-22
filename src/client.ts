@@ -1443,7 +1443,7 @@ export function createApiClient(options: ApiClientOptions) {
       async move(id: number, payload: StockMovementPayload): Promise<Article> {
         return (await request<Wrapped<Article>>('POST', `articles/${id}/movements`, payload)).data
       },
-      movements(filters: { article_id?: number; project_id?: number; type?: string; from?: string; to?: string; page?: number; per_page?: number } = {}): Promise<Paginated<StockMovement>> {
+      movements(filters: { article_id?: number; project_id?: number; type?: string; from?: string; to?: string; search?: string; page?: number; per_page?: number } = {}): Promise<Paginated<StockMovement>> {
         return request('GET', 'stock-movements', undefined, { ...filters })
       },
     },
