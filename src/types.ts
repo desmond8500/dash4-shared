@@ -2292,11 +2292,20 @@ export interface PlanMarker {
   color: string | null
 }
 
+/** Place de la légende : sous le plan, à droite, ou posée sur le plan (à déplacer). */
+export type LegendPosition = 'below' | 'right' | 'overlay'
+
 export interface PlanSettings {
   /** Calques masqués : identifiants de systèmes en texte, `none` pour les repères sans système. */
   hidden_layers: string[]
   legend: boolean
   labels: boolean
+  legend_position: LegendPosition
+  /** Légende posée sur le plan : coin haut gauche, de 0 à 1. */
+  legend_x: number
+  legend_y: number
+  /** Taille de la légende (1 = normale, de 0,5 à 2,5). */
+  legend_scale: number
 }
 
 /** Aperçu d'une page (plan, repères visibles, légende) envoyé par l'éditeur, utilisé dans les PDF. */
