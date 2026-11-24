@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyMarkdown, markdownToText, renderMarkdown } from '../src/markdown.js'
+import { applyMarkdown, continueList, indentList, markdownToText, renderMarkdown } from '../src/markdown.js'
 
 describe('renderMarkdown', () => {
   it('rend la mise en forme courante', () => {
@@ -49,5 +49,50 @@ describe('renderMarkdown avec mentions', () => {
     expect(renderMarkdown('Merci @Awa Diop et **@Awa**', { mentions: ['Awa Diop', 'Awa'] })).toBe(
       '<p>Merci <span class="mention">@Awa Diop</span> et <strong><span class="mention">@Awa</span></strong></p>',
     )
+  })
+})
+
+describe('continueList', () => {
+  const at = (text: string) => {
+    const i = text.indexOf('|')
+    return [text.replace('|', ''), i] as const
+  }
+  const enter = (input: string) => {
+    const [text, i] = at(input)
+    const r = continueList(text, i, i)
+    return r && r.text.slice(0, r.start) + '|' + r.text.slice(r.start)
+  }
+
+  it('reprend la puce, le numéro suivant et la case à cocher', () => {
+    expect(enter('- câble|')).toBe('- câble\n- |')
+    expect(enter('  * sous-point|')).toBe('  * sous-point\n  * |')
+    expect(enter('1. poser|')).toBe('1. poser\n2. |')
+    expect(enter('9) fin|')).toBe('9) fin\n10) |')
+    expect(enter('- [x] fait|')).toBe('- [x] fait\n- [ ] |')
+    expect(enter('> citation|')).toBe('> citation\n> |')
+  })
+
+  it('coupe la ligne au curseur', () => {
+    expect(enter('- avant|après')).toBe('- avant\n- |après')
+  })
+
+  it('termine la liste sur un élément vide', () => {
+    expect(enter('- un\n- |')).toBe('- un\n|')
+    expect(enter('1. un\n2. |')).toBe('1. un\n|')
+  })
+
+  it('ne fait rien hors d’une liste ou dans la puce', () => {
+    expect(enter('texte|')).toBeNull()
+    expect(enter('-| texte')).toBeNull()
+    expect(enter('-pas une liste|')).toBeNull()
+  })
+})
+
+describe('indentList', () => {
+  it('décale les éléments de liste de deux espaces, et revient', () => {
+    expect(indentList('- a\n- b', 6, 6)).toEqual({ text: '- a\n  - b', start: 8, end: 8 })
+    expect(indentList('- a\n  - b', 8, 8, true)).toEqual({ text: '- a\n- b', start: 6, end: 6 })
+    expect(indentList('- a\n- b', 0, 7)).toEqual({ text: '  - a\n  - b', start: 2, end: 11 })
+    expect(indentList('texte', 2, 2)).toBeNull()
   })
 })

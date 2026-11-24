@@ -172,3 +172,79 @@ export function applyMarkdown(text: string, start: number, end: number, action: 
   const result = text.slice(0, lineStart) + changed + text.slice(lineEnd)
   return { text: result, start: lineStart, end: lineStart + changed.length }
 }
+
+/** Résultat d'une touche gérée par l'éditeur : nouveau texte et position du curseur. */
+export interface MarkdownEdit {
+  text: string
+  start: number
+  end: number
+}
+
+const LIST_LINE = /^(\s*)(?:([-*+])|(\d+)([.)]))\s+(\[[ xX]\]\s+)?/
+const QUOTE_LINE = /^(\s*>\s?)/
+
+/**
+ * Entrée dans une liste, comme dans l'éditeur Markdown de VS Code : la ligne suivante reprend la puce
+ * (« - », « 2. », « - [ ] », « > »). Sur un élément vide, la puce est retirée et la liste s'arrête.
+ * Renvoie null quand la ligne n'est pas une liste (l'Entrée garde son comportement normal).
+ */
+export function continueList(text: string, start: number, end: number): MarkdownEdit | null {
+  const lineStart = text.lastIndexOf('\n', start - 1) + 1
+  const lineEndIndex = text.indexOf('\n', start)
+  const lineEnd = lineEndIndex === -1 ? text.length : lineEndIndex
+  const line = text.slice(lineStart, lineEnd)
+  const list = LIST_LINE.exec(line)
+  const quote = list ? null : QUOTE_LINE.exec(line)
+  const marker = list?.[0] ?? quote?.[0]
+  // Curseur dans la puce elle-même : rien de spécial
+  if (!marker || start - lineStart < marker.length) return null
+
+  // Élément vide : on retire la puce (sortie de liste)
+  if (line.slice(marker.length).trim() === '' && start === end) {
+    const next = text.slice(0, lineStart) + text.slice(lineStart + marker.length)
+    return { text: next, start: lineStart, end: lineStart }
+  }
+
+  let prefix: string
+  if (list) {
+    const [, indent = '', bullet, number, delimiter, task] = list
+    prefix = indent + (bullet ?? `${Number(number) + 1}${delimiter}`) + ' ' + (task ? '[ ] ' : '')
+  } else {
+    prefix = quote![1]!.endsWith(' ') ? quote![1]! : `${quote![1]} `
+  }
+  const insert = `\n${prefix}`
+  const next = text.slice(0, start) + insert + text.slice(end)
+  const caret = start + insert.length
+  return { text: next, start: caret, end: caret }
+}
+
+/**
+ * Tabulation dans une liste : décale les lignes de la sélection de deux espaces (Maj+Tab : vers la gauche).
+ * Renvoie null hors d'une liste (la tabulation passe alors au champ suivant, comme d'habitude).
+ */
+export function indentList(text: string, start: number, end: number, outdent = false): MarkdownEdit | null {
+  const lineStart = text.lastIndexOf('\n', start - 1) + 1
+  const lineEndIndex = text.indexOf('\n', end)
+  const lineEnd = lineEndIndex === -1 ? text.length : lineEndIndex
+  const lines = text.slice(lineStart, lineEnd).split('\n')
+  if (!lines.every((l) => LIST_LINE.test(l))) return null
+  let firstShift = 0
+  let total = 0
+  const changed = lines.map((l, i) => {
+    let shift: number
+    let out: string
+    if (outdent) {
+      const removed = Math.min(2, l.length - l.trimStart().length)
+      shift = -removed
+      out = l.slice(removed)
+    } else {
+      shift = 2
+      out = `  ${l}`
+    }
+    if (i === 0) firstShift = shift
+    total += shift
+    return out
+  })
+  const next = text.slice(0, lineStart) + changed.join('\n') + text.slice(lineEnd)
+  return { text: next, start: Math.max(lineStart, start + firstShift), end: Math.max(lineStart, end + total) }
+}
