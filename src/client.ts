@@ -1513,6 +1513,10 @@ export function createApiClient(options: ApiClientOptions) {
       async remove(id: number): Promise<void> {
         await request('DELETE', `articles/${id}`)
       },
+      /** Copie l'article (sans son image ni sa quantité en stock, qui démarre à 0). */
+      async duplicate(id: number): Promise<Article> {
+        return (await request<Wrapped<Article>>('POST', `articles/${id}/duplicate`)).data
+      },
       async uploadImage(id: number, file: Blob, filename = 'image'): Promise<Article> {
         const form = new FormData()
         form.append('image', file, filename)

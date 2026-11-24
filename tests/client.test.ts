@@ -292,11 +292,13 @@ describe('client API', () => {
     expect(await api.articles.findByBarcode('6941264012345')).toBeNull()
     await api.articles.move(5, { type: 'out', quantity: 2, project_id: 3 })
     await api.articles.list({ low: true, active: 'all' })
+    await api.articles.duplicate(5)
     await api.purchases.receive(9, { lines: [{ id: 1, quantity: 4 }] })
 
     expect(fetch.mock.calls[0]?.[0]).toContain('barcode=6941264012345')
     expect(fetch.mock.calls[1]?.[0]).toBe('https://api.test/api/v1/articles/5/movements')
     expect(fetch.mock.calls[2]?.[0]).toContain('low=1')
+    expect(fetch.mock.calls[3]?.[0]).toBe('https://api.test/api/v1/articles/5/duplicate')
     expect(fetch.mock.calls[2]?.[0]).toContain('active=all')
     expect(JSON.parse(fetch.mock.calls[3]?.[1]?.body)).toEqual({ lines: [{ id: 1, quantity: 4 }] })
   })

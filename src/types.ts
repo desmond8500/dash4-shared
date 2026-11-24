@@ -1006,6 +1006,8 @@ export interface QuoteSystem {
 export interface QuoteTemplateLine {
   id?: number
   position?: number
+  article_id: number | null
+  article?: QuoteLineArticle | null
   designation: string
   reference: string | null
   category: Labelled<QuoteLineCategory>
@@ -1032,6 +1034,7 @@ export interface QuoteTemplatePayload {
   icon?: string | null
   quote_system_id?: number | null
   lines?: Array<{
+    article_id?: number | null
     designation: string
     reference?: string | null
     category?: QuoteLineCategory
