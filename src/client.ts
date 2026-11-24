@@ -835,6 +835,18 @@ export function createApiClient(options: ApiClientOptions) {
     },
 
     /** Contrats de maintenance (`contracts.*`) et forfaits. */
+    /** Photo principale d'un véhicule ou d'un outil (les autres photos sont des documents image de la fiche). */
+    photos: {
+      async upload<T extends 'vehicles' | 'tools'>(type: T, id: number, file: Blob, filename: string): Promise<T extends 'vehicles' ? Vehicle : Tool> {
+        const form = new FormData()
+        form.append('photo', file, filename)
+        return (await request<Wrapped<T extends 'vehicles' ? Vehicle : Tool>>('POST', `${type}/${id}/photo`, form)).data
+      },
+      async remove<T extends 'vehicles' | 'tools'>(type: T, id: number): Promise<T extends 'vehicles' ? Vehicle : Tool> {
+        return (await request<Wrapped<T extends 'vehicles' ? Vehicle : Tool>>('DELETE', `${type}/${id}/photo`)).data
+      },
+    },
+
     /** Outillage (`tools.*`) : outils liés aux articles, prêts, retours et rappels. */
     tools: {
       async list(filters: ToolFilters = {}): Promise<Tool[]> {

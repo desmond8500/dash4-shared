@@ -3019,6 +3019,8 @@ export interface Vehicle {
   acquired_on: string | null
   /** Avec `costs.view` seulement. */
   purchase_price?: number | null
+  /** Photo principale du véhicule. */
+  photo_url: string | null
   mileage: number
   service_interval_km: number | null
   service_interval_months: number | null
@@ -3030,7 +3032,8 @@ export interface Vehicle {
   maintenances?: VehicleMaintenance[]
   upcoming?: VehicleUpcoming[]
   costs?: VehicleCosts
-  can: { update: boolean; delete: boolean; record_mileage: boolean }
+  /** `add_photos` : qui gère le parc, ou le conducteur attitré. */
+  can: { update: boolean; delete: boolean; record_mileage: boolean; add_photos: boolean }
   created_at: string | null
   updated_at: string | null
 }
@@ -3166,6 +3169,10 @@ export interface Tool {
   /** « Perceuse (OUT-012) ». */
   title: string
   serial_number: string | null
+  /** Photo de l'outil. */
+  photo_url: string | null
+  /** Photo à afficher : celle de l'outil, sinon celle de son article. */
+  image_url: string | null
   article_id: number | null
   article?: { id: number; designation: string; reference: string | null; brand: string | null } | null
   condition: LabelledValue<ToolCondition>
