@@ -21,3 +21,11 @@ describe('outillage', () => {
     expect(toolSeverity('returned')).toBe('secondary')
   })
 })
+
+describe('libellés de l’outillage', () => {
+  it('nomme chaque état et chaque disponibilité', async () => {
+    const { TOOL_CONDITION_LABELS, TOOL_STATUS_LABELS } = await import('../src/types.js')
+    expect(TOOL_CONDITION_LABELS.repair).toBe('En réparation')
+    expect(TOOL_STATUS_LABELS.late).toBe('Prêté — en retard')
+  })
+})

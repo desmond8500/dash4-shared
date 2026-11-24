@@ -3116,6 +3116,22 @@ export type ToolStatus = 'available' | 'lent' | 'late' | 'unavailable'
 /** `soon` : à rendre demain ou aujourd'hui. */
 export type ToolLoanState = 'ongoing' | 'soon' | 'late' | 'returned'
 
+export const TOOL_CONDITION_LABELS: Record<ToolCondition, string> = {
+  good: 'Bon état',
+  worn: 'Usé',
+  repair: 'En réparation',
+  broken: 'Hors service',
+  lost: 'Perdu',
+  retired: 'Réformé',
+}
+
+export const TOOL_STATUS_LABELS: Record<ToolStatus, string> = {
+  available: 'Disponible',
+  lent: 'Prêté',
+  late: 'Prêté — en retard',
+  unavailable: 'Indisponible',
+}
+
 export interface ToolLoan {
   id: number
   client_uuid: string | null
