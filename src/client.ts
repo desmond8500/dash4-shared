@@ -3,6 +3,14 @@ import type {
   PlanIcon,
   PlanIconPayload,
   PlanSettings,
+  Tool,
+  ToolFilters,
+  ToolLendPayload,
+  ToolLoan,
+  ToolLoanFilters,
+  ToolOptions,
+  ToolPayload,
+  ToolReturnPayload,
   Vehicle,
   VehicleFilters,
   VehiclePayload,
@@ -827,6 +835,54 @@ export function createApiClient(options: ApiClientOptions) {
     },
 
     /** Contrats de maintenance (`contracts.*`) et forfaits. */
+    /** Outillage (`tools.*`) : outils liés aux articles, prêts, retours et rappels. */
+    tools: {
+      async list(filters: ToolFilters = {}): Promise<Tool[]> {
+        const { mine, ...rest } = filters
+        return (await request<Wrapped<Tool[]>>('GET', 'tools', undefined, { ...rest, ...(mine ? { mine: 1 } : {}) })).data
+      },
+      async options(): Promise<ToolOptions> {
+        return (await request<Wrapped<ToolOptions>>('GET', 'tools/options')).data
+      },
+      async get(id: number): Promise<Tool> {
+        return (await request<Wrapped<Tool>>('GET', `tools/${id}`)).data
+      },
+      async create(payload: ToolPayload): Promise<Tool> {
+        return (await request<Wrapped<Tool>>('POST', 'tools', payload)).data
+      },
+      /** Plusieurs exemplaires d'un coup (2 à 50) : numéros suffixés -01, -02… */
+      async createMany(payload: ToolPayload, count: number): Promise<Tool[]> {
+        return (await request<Wrapped<Tool[]>>('POST', 'tools', { ...payload, count })).data
+      },
+      async update(id: number, payload: ToolPayload): Promise<Tool> {
+        return (await request<Wrapped<Tool>>('PATCH', `tools/${id}`, payload)).data
+      },
+      async remove(id: number): Promise<void> {
+        await request('DELETE', `tools/${id}`)
+      },
+      /** Prêts : `open` en cours, `late` en retard. */
+      async loans(filters: ToolLoanFilters = {}): Promise<ToolLoan[]> {
+        const { open, late, ...rest } = filters
+        return (await request<Wrapped<ToolLoan[]>>('GET', 'tool-loans', undefined, { ...rest, ...(open ? { open: 1 } : {}), ...(late ? { late: 1 } : {}) })).data
+      },
+      async lend(id: number, payload: ToolLendPayload): Promise<Tool> {
+        return (await request<Wrapped<Tool>>('POST', `tools/${id}/loans`, payload)).data
+      },
+      async updateLoan(id: number, loanId: number, payload: Pick<ToolLendPayload, 'due_on' | 'project_id' | 'borrower_phone' | 'notes'>): Promise<Tool> {
+        return (await request<Wrapped<Tool>>('PATCH', `tools/${id}/loans/${loanId}`, payload)).data
+      },
+      async returnTool(id: number, loanId: number, payload: ToolReturnPayload = {}): Promise<Tool> {
+        return (await request<Wrapped<Tool>>('POST', `tools/${id}/loans/${loanId}/return`, payload)).data
+      },
+      /** Rappel envoyé tout de suite à l'emprunteur (s'il a un compte). */
+      async remind(id: number, loanId: number): Promise<Tool> {
+        return (await request<Wrapped<Tool>>('POST', `tools/${id}/loans/${loanId}/remind`)).data
+      },
+      async removeLoan(id: number, loanId: number): Promise<Tool> {
+        return (await request<Wrapped<Tool>>('DELETE', `tools/${id}/loans/${loanId}`)).data
+      },
+    },
+
     /** Parc automobile : véhicules et scooters, papiers, kilométrage, entretiens. */
     vehicles: {
       async list(filters: VehicleFilters = {}): Promise<Vehicle[]> {
@@ -1179,9 +1235,12 @@ export function createApiClient(options: ApiClientOptions) {
         const res = await request<Wrapped<Site> & { meta: { created: number } }>('POST', `quotes/${id}/site-equipment`, payload)
         return { site: res.data, created: res.meta?.created ?? 0 }
       },
-      /** PDF du devis (logo, banque, signature et cachet). */
-      pdf(id: number): Promise<Blob> {
-        return requestBlob(`quotes/${id}/pdf`)
+      /**
+       * PDF du devis (logo, banque, signature et cachet).
+       * `neutral` : version neutre ou non pour ce téléchargement ; sans valeur, le réglage du devis.
+       */
+      pdf(id: number, neutral?: boolean): Promise<Blob> {
+        return requestBlob(`quotes/${id}/pdf${neutral === undefined ? '' : `?neutral=${neutral ? 1 : 0}`}`)
       },
       /** Copie signée par le client : le devis passe à « Accepté ». */
       async uploadSignedCopy(id: number, file: Blob, filename: string): Promise<Quote> {

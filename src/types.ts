@@ -383,7 +383,7 @@ export interface Assignee {
 // ---------------------------------------------------------------------------
 
 /** Fiches qui ont un fil de commentaires. */
-export type CommentableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'tech-shares' | 'installed-systems' | 'equipment' | 'reception-reports' | 'contracts' | 'vehicles'
+export type CommentableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'tech-shares' | 'installed-systems' | 'equipment' | 'reception-reports' | 'contracts' | 'vehicles' | 'tools'
 
 export interface Comment {
   id: number
@@ -429,6 +429,8 @@ export interface AppNotification {
   contract_id?: number
   vehicle_id?: number
   invoice_id?: number
+  tool_id?: number
+  tool_loan_id?: number
   /** Fiche concernée (mention dans un commentaire). */
   subject_type?: CommentableType
   subject_id?: number
@@ -459,7 +461,7 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
 export const ACTIVE_PROJECT_STATUSES: ProjectStatus[] = ['planned', 'in_progress', 'on_hold']
 
 /** Fiches qui acceptent notes, liens et documents (segment de l'adresse de l'API). */
-export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'journal-sections' | 'tech-shares' | 'comments' | 'buildings' | 'installed-systems' | 'equipment' | 'reception-reports' | 'sheets' | 'contracts' | 'messages' | 'vehicles' | 'vehicle-papers'
+export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'journal-sections' | 'tech-shares' | 'comments' | 'buildings' | 'installed-systems' | 'equipment' | 'reception-reports' | 'sheets' | 'contracts' | 'messages' | 'vehicles' | 'vehicle-papers' | 'tools'
 
 export interface Note {
   id: number
@@ -764,6 +766,8 @@ export interface Quote {
   bank_account_id: number | null
   bank_account?: { id: number; bank_name: string; label: string | null } | null
   show_signature: boolean
+  /** Devis neutre : PDF sans logo, coordonnées, mentions, banque, signature ni conditions générales. */
+  is_neutral: boolean
   is_favorite: boolean
   /** Montants : `prices.view`. */
   subtotal?: number
@@ -818,6 +822,8 @@ export interface QuotePayload {
   discount_rate?: number
   bank_account_id?: number | null
   show_signature?: boolean
+  /** Modifiable même sur un devis accepté (présentation du PDF seulement). */
+  is_neutral?: boolean
   is_favorite?: boolean
   proposal_options?: Partial<ProposalOptions>
 }
@@ -2696,7 +2702,7 @@ export interface ProfilePayload {
 
 export type Theme = 'system' | 'light' | 'dark'
 
-export type NotificationCategory = 'mentions' | 'tasks' | 'requests' | 'tech' | 'expenses' | 'stock' | 'contracts' | 'invoices' | 'fleet'
+export type NotificationCategory = 'mentions' | 'tasks' | 'requests' | 'tech' | 'expenses' | 'stock' | 'contracts' | 'invoices' | 'fleet' | 'tools'
 
 export interface UserPreferences {
   theme: Theme
@@ -2720,6 +2726,7 @@ export const NOTIFICATION_CATEGORIES: { value: NotificationCategory; label: stri
   { value: 'contracts', label: 'Contrats de maintenance' },
   { value: 'invoices', label: 'Factures à relancer' },
   { value: 'fleet', label: 'Parc automobile (papiers, entretiens)' },
+  { value: 'tools', label: 'Outillage (prêts et retours)' },
 ]
 
 /** Le thème sombre s'applique-t-il ? (`system` : selon l'appareil) */
@@ -3098,4 +3105,117 @@ export interface VehicleOptions {
   statuses: LabelledValue<VehicleStatus>[]
   paper_types: LabelledValue<VehiclePaperType>[]
   maintenance_types: LabelledValue<MaintenanceType>[]
+}
+
+// ---------------------------------------------------------------------------
+// Outillage : outils liés aux articles, prêts et retours
+// ---------------------------------------------------------------------------
+
+export type ToolCondition = 'good' | 'worn' | 'repair' | 'broken' | 'lost' | 'retired'
+export type ToolStatus = 'available' | 'lent' | 'late' | 'unavailable'
+/** `soon` : à rendre demain ou aujourd'hui. */
+export type ToolLoanState = 'ongoing' | 'soon' | 'late' | 'returned'
+
+export interface ToolLoan {
+  id: number
+  client_uuid: string | null
+  tool_id: number
+  /** Dans la liste des prêts seulement. */
+  tool: { id: number; name: string; code: string | null; title: string } | null
+  borrower_id: number | null
+  borrower: UserRef | null
+  /** Emprunteur extérieur (sans compte Dash4). */
+  borrower_name: string | null
+  borrower_phone: string | null
+  /** Nom affiché : utilisateur ou nom libre. */
+  borrower_label: string
+  project: { id: number; name: string } | null
+  lent_at: string | null
+  due_on: string | null
+  returned_at: string | null
+  return_condition: LabelledValue<ToolCondition> | null
+  notes: string | null
+  return_notes: string | null
+  state: ToolLoanState
+  last_reminded_on: string | null
+  lender: UserRef | null
+  returned_by: UserRef | null
+}
+
+export interface Tool {
+  id: number
+  name: string
+  /** Numéro d'inventaire. */
+  code: string | null
+  /** « Perceuse (OUT-012) ». */
+  title: string
+  serial_number: string | null
+  article_id: number | null
+  article?: { id: number; designation: string; reference: string | null; brand: string | null } | null
+  condition: LabelledValue<ToolCondition>
+  status: LabelledValue<ToolStatus>
+  storage_location_id: number | null
+  storage_location?: { id: number; name: string } | null
+  acquired_on: string | null
+  /** Avec `costs.view` seulement. */
+  purchase_value?: number | null
+  notes: string | null
+  current_loan?: ToolLoan | null
+  loans?: ToolLoan[]
+  can: { update: boolean; delete: boolean; lend: boolean }
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface ToolFilters {
+  /** `lent` comprend les prêts en retard. */
+  status?: ToolStatus
+  article_id?: number
+  borrower_id?: number
+  /** Outils que j'ai en prêt. */
+  mine?: boolean
+  search?: string
+}
+
+export interface ToolPayload {
+  article_id?: number | null
+  name?: string | null
+  code?: string | null
+  serial_number?: string | null
+  condition?: ToolCondition
+  storage_location_id?: number | null
+  acquired_on?: string | null
+  purchase_value?: number | null
+  notes?: string | null
+}
+
+export interface ToolOptions {
+  conditions: Array<{ value: ToolCondition; label: string }>
+  statuses: Array<{ value: ToolStatus; label: string }>
+  /** Utilisateurs à qui prêter (vide sans `tools.lend`). */
+  borrowers: UserRef[]
+}
+
+export interface ToolLendPayload {
+  client_uuid?: string
+  borrower_id?: number | null
+  borrower_name?: string | null
+  borrower_phone?: string | null
+  project_id?: number | null
+  lent_at?: string | null
+  due_on?: string | null
+  notes?: string | null
+}
+
+export interface ToolReturnPayload {
+  returned_at?: string | null
+  condition?: ToolCondition | null
+  return_notes?: string | null
+}
+
+export interface ToolLoanFilters {
+  open?: boolean
+  late?: boolean
+  borrower_id?: number
+  tool_id?: number
 }
