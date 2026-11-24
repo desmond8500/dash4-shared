@@ -13,6 +13,8 @@ export type RoleName =
   | 'accountant'
   | 'storekeeper'
   | 'technician'
+  /** Lecture seule (démonstrations) : consulte tout sauf les coûts et la banque, ne modifie rien. */
+  | 'viewer'
 
 export interface LabelledValue<T extends string = string> {
   value: T

@@ -13,6 +13,7 @@ export const ROLE_LABELS: Record<RoleName, string> = {
   accountant: 'Comptable',
   storekeeper: 'Magasinier',
   technician: 'Technicien',
+  viewer: 'Lecture seule',
 }
 
 export const MANAGER_ROLES: RoleName[] = [
@@ -22,6 +23,7 @@ export const MANAGER_ROLES: RoleName[] = [
   'sales',
   'accountant',
   'storekeeper',
+  'viewer',
 ]
 
 type MaybeUser = Pick<CurrentUser, 'permissions' | 'account_type' | 'roles'> | null | undefined
@@ -50,6 +52,11 @@ export function isTechnician(user: MaybeUser): boolean {
 
 export function hasRole(user: MaybeUser, role: RoleName): boolean {
   return !!user && user.roles.some((r) => r.name === role)
+}
+
+/** Compte en lecture seule : l'API refuse toute modification. */
+export function isReadOnly(user: MaybeUser): boolean {
+  return hasRole(user, 'viewer')
 }
 
 export function isAdmin(user: MaybeUser): boolean {

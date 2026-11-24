@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { can, canSee, isAdmin, isTechnician, rolesForAccountType } from '../src'
+import { can, canSee, isAdmin, isReadOnly, isTechnician, rolesForAccountType } from '../src'
 import type { CurrentUser } from '../src'
 
 function user(partial: Partial<CurrentUser>): CurrentUser {
@@ -44,5 +44,13 @@ describe('permissions', () => {
   it('ne propose que le rôle Technicien à un compte technicien', () => {
     expect(rolesForAccountType('technician')).toEqual(['technician'])
     expect(rolesForAccountType('manager')).not.toContain('technician')
+  })
+})
+
+describe('compte lecture seule', () => {
+  it('se reconnaît à son rôle et se propose pour un compte gestionnaire', () => {
+    const user = { permissions: ['quotes.view'], account_type: { value: 'manager', label: 'Gestionnaire' }, roles: [{ name: 'viewer', label: 'Lecture seule' }] } as never
+    expect(isReadOnly(user)).toBe(true)
+    expect(rolesForAccountType('manager')).toContain('viewer')
   })
 })
