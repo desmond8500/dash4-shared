@@ -300,7 +300,7 @@ describe('client API', () => {
     expect(fetch.mock.calls[2]?.[0]).toContain('low=1')
     expect(fetch.mock.calls[3]?.[0]).toBe('https://api.test/api/v1/articles/5/duplicate')
     expect(fetch.mock.calls[2]?.[0]).toContain('active=all')
-    expect(JSON.parse(fetch.mock.calls[3]?.[1]?.body)).toEqual({ lines: [{ id: 1, quantity: 4 }] })
+    expect(JSON.parse(fetch.mock.calls[4]?.[1]?.body)).toEqual({ lines: [{ id: 1, quantity: 4 }] })
   })
 
   it('transforme un e-mail en demande et lie la demande à un bordereau', async () => {
