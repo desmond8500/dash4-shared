@@ -735,6 +735,8 @@ export interface QuoteLine {
   designation: string
   reference: string | null
   comment: string | null
+  /** Ligne reprise dans le quantitatif (les forfaits n'y sont jamais). */
+  show_in_quantities: boolean
   category: Labelled<QuoteLineCategory>
   unit: string | null
   quantity: number
@@ -996,7 +998,12 @@ export interface QuoteEmailPayload {
   message: string
   attach_proposal?: boolean
   signature_id?: number | null
+  /** `proposal` : la proposition technique seule (le statut du devis ne change pas). */
+  document?: QuoteEmailDocument
 }
+
+/** Document envoyé depuis un devis : le devis (par défaut) ou la proposition technique seule. */
+export type QuoteEmailDocument = 'quote' | 'proposal'
 
 export interface QuoteTemplateSummary {
   id: number

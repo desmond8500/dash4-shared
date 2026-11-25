@@ -373,6 +373,22 @@ describe('client API', () => {
     ])
   })
 
+  it('envoie la proposition technique seule et choisit les lignes du quantitatif', async () => {
+    const fetch = vi.fn().mockImplementation(async () => jsonResponse(200, { data: { id: 7 } }))
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+
+    await api.quotes.emailDraft(7)
+    await api.quotes.emailDraft(7, 'proposal')
+    await api.quotes.send(7, { document: 'proposal', to: ['a@b.sn'], subject: 'X', message: 'Y' })
+    await api.quotes.setQuantitiesLines(7, [3, 4])
+
+    expect(fetch.mock.calls[0]?.[0]).toBe('https://api.test/api/v1/quotes/7/email-draft')
+    expect(fetch.mock.calls[1]?.[0]).toBe('https://api.test/api/v1/quotes/7/email-draft?document=proposal')
+    expect(JSON.parse(fetch.mock.calls[2]?.[1]?.body).document).toBe('proposal')
+    expect(fetch.mock.calls[3]?.[0]).toBe('https://api.test/api/v1/quotes/7/quantities/lines')
+    expect(JSON.parse(fetch.mock.calls[3]?.[1]?.body)).toEqual({ hidden: [3, 4] })
+  })
+
   it('lie des contacts à un projet ou à un devis', async () => {
     const fetch = vi.fn().mockImplementation(async () => jsonResponse(200, { data: { id: 4 } }))
     const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })

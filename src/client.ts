@@ -116,6 +116,7 @@ import type {
   AppSettings,
   AttachableType,
   ContactableType,
+  QuoteEmailDocument,
   RecordContact,
   BankAccount,
   BankAccountPayload,
@@ -1380,11 +1381,18 @@ export function createApiClient(options: ApiClientOptions) {
       deliveryNotePdf(noteId: number): Promise<Blob> {
         return requestBlob(`delivery-notes/${noteId}/pdf`)
       },
-      /** Destinataires proposés (client et contacts), objet et message. */
-      async emailDraft(id: number): Promise<QuoteEmailDraft> {
-        return (await request<Wrapped<QuoteEmailDraft>>('GET', `quotes/${id}/email-draft`)).data
+      /**
+       * Destinataires proposés (contacts liés au devis d'abord, puis client et ses contacts), objet et message.
+       * `document: 'proposal'` : pour envoyer la proposition technique seule.
+       */
+      async emailDraft(id: number, document: QuoteEmailDocument = 'quote'): Promise<QuoteEmailDraft> {
+        return (await request<Wrapped<QuoteEmailDraft>>('GET', `quotes/${id}/email-draft${document === 'proposal' ? '?document=proposal' : ''}`)).data
       },
-      /** Envoie le devis par e-mail avec son PDF ; un brouillon passe à « Envoyé ». */
+      /** Lignes retirées du quantitatif (`hidden`) ; les autres y sont. Possible même sur un devis accepté. */
+      async setQuantitiesLines(id: number, hidden: number[]): Promise<Quote> {
+        return (await request<Wrapped<Quote>>('POST', `quotes/${id}/quantities/lines`, { hidden })).data
+      },
+      /** Envoie le devis par e-mail avec son PDF (un brouillon passe à « Envoyé »), ou la proposition seule (`document: 'proposal'`). */
       async send(id: number, payload: QuoteEmailPayload): Promise<Quote> {
         return (await request<Wrapped<Quote>>('POST', `quotes/${id}/send`, payload)).data
       },
