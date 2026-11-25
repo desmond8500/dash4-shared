@@ -463,6 +463,18 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
 export const ACTIVE_PROJECT_STATUSES: ProjectStatus[] = ['planned', 'in_progress', 'on_hold']
 
 /** Fiches qui acceptent notes, liens et documents (segment de l'adresse de l'API). */
+/** Fiches auxquelles on lie des contacts. */
+export type ContactableType = 'projects' | 'quotes'
+
+/** Contact lié à un projet ou à un devis, avec son rôle (« Maître d'ouvrage », « Architecte »…). */
+export interface RecordContact {
+  id: number
+  role: string | null
+  position: number
+  contact: Contact
+  created_at: string | null
+}
+
 export type AttachableType = 'clients' | 'projects' | 'quotes' | 'invoices' | 'articles' | 'brands' | 'providers' | 'purchases' | 'expenses' | 'tasks' | 'client-requests' | 'journals' | 'journal-sections' | 'tech-shares' | 'comments' | 'buildings' | 'installed-systems' | 'equipment' | 'reception-reports' | 'sheets' | 'contracts' | 'messages' | 'vehicles' | 'vehicle-papers' | 'tools'
 
 export interface Note {

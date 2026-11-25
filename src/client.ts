@@ -115,6 +115,8 @@ import type {
   QuoteStatus,
   AppSettings,
   AttachableType,
+  ContactableType,
+  RecordContact,
   BankAccount,
   BankAccountPayload,
   Company,
@@ -1165,6 +1167,28 @@ export function createApiClient(options: ApiClientOptions) {
       },
       async removeLogo(id: number): Promise<Project> {
         return (await request<Wrapped<Project>>('DELETE', `projects/${id}/logo`)).data
+      },
+    },
+
+    /** Contacts liés à un projet ou à un devis (un contact peut venir d'un autre client). */
+    recordContacts: {
+      async list(type: ContactableType, id: number): Promise<RecordContact[]> {
+        return (await request<Wrapped<RecordContact[]>>('GET', `${type}/${id}/contacts`)).data
+      },
+      /** Lie le contact ; déjà lié, seul son rôle change. */
+      async add(type: ContactableType, id: number, contactId: number, role?: string | null): Promise<RecordContact> {
+        const payload = role === undefined ? { contact_id: contactId } : { contact_id: contactId, role }
+        return (await request<Wrapped<RecordContact>>('POST', `${type}/${id}/contacts`, payload)).data
+      },
+      async setRole(linkId: number, role: string | null): Promise<RecordContact> {
+        return (await request<Wrapped<RecordContact>>('PATCH', `record-contacts/${linkId}`, { role })).data
+      },
+      async order(type: ContactableType, id: number, ids: number[]): Promise<RecordContact[]> {
+        return (await request<Wrapped<RecordContact[]>>('POST', `${type}/${id}/contacts/order`, { ids })).data
+      },
+      /** Retire le contact de la fiche (le contact reste). */
+      async remove(linkId: number): Promise<void> {
+        await request('DELETE', `record-contacts/${linkId}`)
       },
     },
 

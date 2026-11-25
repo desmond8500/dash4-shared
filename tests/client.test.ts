@@ -373,6 +373,30 @@ describe('client API', () => {
     ])
   })
 
+  it('lie des contacts à un projet ou à un devis', async () => {
+    const fetch = vi.fn().mockImplementation(async () => jsonResponse(200, { data: { id: 4 } }))
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+
+    await api.recordContacts.list('projects', 3)
+    await api.recordContacts.add('quotes', 7, 12)
+    await api.recordContacts.add('quotes', 7, 12, 'Architecte')
+    await api.recordContacts.setRole(4, null)
+    await api.recordContacts.order('projects', 3, [5, 4])
+    await api.recordContacts.remove(4)
+
+    expect(fetch.mock.calls.map((c) => `${c[1]?.method} ${c[0]}`)).toEqual([
+      'GET https://api.test/api/v1/projects/3/contacts',
+      'POST https://api.test/api/v1/quotes/7/contacts',
+      'POST https://api.test/api/v1/quotes/7/contacts',
+      'PATCH https://api.test/api/v1/record-contacts/4',
+      'POST https://api.test/api/v1/projects/3/contacts/order',
+      'DELETE https://api.test/api/v1/record-contacts/4',
+    ])
+    expect(JSON.parse(fetch.mock.calls[1]?.[1]?.body)).toEqual({ contact_id: 12 })
+    expect(JSON.parse(fetch.mock.calls[2]?.[1]?.body)).toEqual({ contact_id: 12, role: 'Architecte' })
+    expect(JSON.parse(fetch.mock.calls[3]?.[1]?.body)).toEqual({ role: null })
+  })
+
   it('gère les signatures d\'e-mail', async () => {
     const fetch = vi
       .fn()
