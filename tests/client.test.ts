@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { ApiError, createApiClient } from '../src'
+import { ApiError, createApiClient, downloadedFileName, fileNameFromDisposition } from '../src'
 
 function memoryStorage(initial: string | null = null) {
   let token = initial
@@ -387,6 +387,22 @@ describe('client API', () => {
     expect(JSON.parse(fetch.mock.calls[2]?.[1]?.body).document).toBe('proposal')
     expect(fetch.mock.calls[3]?.[0]).toBe('https://api.test/api/v1/quotes/7/quantities/lines')
     expect(JSON.parse(fetch.mock.calls[3]?.[1]?.body)).toEqual({ hidden: [3, 4] })
+  })
+
+  it('lit le nom des fichiers téléchargés (accents compris)', async () => {
+    expect(fileNameFromDisposition(`attachment; filename="Hotel Teranga - Alarme - DEV-2026-0001.pdf"; filename*=utf-8''H%C3%B4tel%20Teranga%20-%20Alarme%20-%20DEV-2026-0001.pdf`))
+      .toBe('Hôtel Teranga - Alarme - DEV-2026-0001.pdf')
+    expect(fileNameFromDisposition('inline; filename="Proposition technique - A - B.pdf"')).toBe('Proposition technique - A - B.pdf')
+    expect(fileNameFromDisposition('attachment; filename=DEV-1.pdf')).toBe('DEV-1.pdf')
+    expect(fileNameFromDisposition(null)).toBeNull()
+
+    const fetch = vi.fn().mockResolvedValue(
+      new Response('%PDF', { status: 200, headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `inline; filename="a.pdf"; filename*=utf-8''Devis%20%C3%A9t%C3%A9.pdf` } }),
+    )
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+    const file = await api.quotes.pdf(1)
+    expect(downloadedFileName(file, 'secours.pdf')).toBe('Devis été.pdf')
+    expect(downloadedFileName(new Blob(['x']), 'secours.pdf')).toBe('secours.pdf')
   })
 
   it('lie des contacts à un projet ou à un devis', async () => {

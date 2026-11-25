@@ -226,6 +226,30 @@ function toForm(payload: object, file?: Blob, filename?: string): FormData {
   return form
 }
 
+/**
+ * Nom de fichier d'un en-tête Content-Disposition : `filename*=UTF-8''…` (accents) en priorité, sinon `filename="…"`.
+ */
+export function fileNameFromDisposition(header: string | null | undefined): string | null {
+  if (!header) return null
+  const star = /filename\*\s*=\s*([^']*)'[^']*'([^;]+)/i.exec(header)
+  if (star?.[2]) {
+    try {
+      return decodeURIComponent(star[2].trim().replace(/^"|"$/g, ''))
+    } catch {
+      // encodage invalide : on prend le nom simple
+    }
+  }
+  const plain = /filename\s*=\s*("((?:[^"\\]|\\.)*)"|[^;]+)/i.exec(header)
+  if (!plain) return null
+  const value = (plain[2] ?? plain[1] ?? '').replace(/\\(.)/g, '$1').trim()
+  return value || null
+}
+
+/** Nom d'un fichier téléchargé (`File` rendu par le client), sinon le nom de secours. */
+export function downloadedFileName(blob: Blob, fallback: string): string {
+  return typeof File !== 'undefined' && blob instanceof File && blob.name ? blob.name : fallback
+}
+
 export function createApiClient(options: ApiClientOptions) {
   const baseUrl = options.baseUrl.replace(/\/+$/, '')
   const doFetch = options.fetch ?? globalThis.fetch.bind(globalThis)
@@ -236,10 +260,15 @@ export function createApiClient(options: ApiClientOptions) {
     return (text ? safeJson(text) : null) as T
   }
 
-  /** Téléchargement d'un fichier privé (document) avec le jeton de connexion. */
+  /**
+   * Téléchargement d'un fichier privé (document, PDF) avec le jeton de connexion. Le résultat est un `File`
+   * qui porte le nom donné par le serveur (« Client - Objet - Référence.pdf »), quand il est connu.
+   */
   async function requestBlob(path: string): Promise<Blob> {
     const response = await send('GET', path)
-    return response.blob()
+    const blob = await response.blob()
+    const name = fileNameFromDisposition(response.headers.get('Content-Disposition'))
+    return name && typeof File !== 'undefined' ? new File([blob], name, { type: blob.type }) : blob
   }
 
   async function send(method: string, path: string, body?: unknown, query?: Query): Promise<Response> {
