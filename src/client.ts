@@ -116,6 +116,10 @@ import type {
   AppSettings,
   AttachableType,
   ContactableType,
+  PracticalToolInfo,
+  PracticalToolLink,
+  PracticalToolLinkType,
+  RecordPracticalTool,
   QuoteEmailDocument,
   RecordContact,
   BankAccount,
@@ -1197,6 +1201,24 @@ export function createApiClient(options: ApiClientOptions) {
       },
       async removeLogo(id: number): Promise<Project> {
         return (await request<Wrapped<Project>>('DELETE', `projects/${id}/logo`)).data
+      },
+    },
+
+    /** Outils pratiques (calculs, conversions) et leurs liens avec marques, fournisseurs et articles. */
+    practicalTools: {
+      async list(): Promise<PracticalToolInfo[]> {
+        return (await request<Wrapped<PracticalToolInfo[]>>('GET', 'practical-tools')).data
+      },
+      /** Outils liés à une marque, un fournisseur ou un article. */
+      async forRecord(type: PracticalToolLinkType, id: number): Promise<RecordPracticalTool[]> {
+        return (await request<Wrapped<RecordPracticalTool[]>>('GET', `practical-tools/for/${type}/${id}`)).data
+      },
+      /** Lie l'outil à la fiche (`stock.update`) ; déjà lié, rien ne change. */
+      async link(tool: string, type: PracticalToolLinkType, id: number): Promise<PracticalToolLink> {
+        return (await request<Wrapped<PracticalToolLink>>('POST', `practical-tools/${tool}/links`, { type, id })).data
+      },
+      async unlink(linkId: number): Promise<void> {
+        await request('DELETE', `practical-tool-links/${linkId}`)
       },
     },
 

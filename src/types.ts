@@ -3266,3 +3266,27 @@ export interface ToolLoanFilters {
   borrower_id?: number
   tool_id?: number
 }
+
+/** Fiches auxquelles on lie un outil pratique. */
+export type PracticalToolLinkType = 'articles' | 'brands' | 'providers'
+
+/** Lien d'un outil pratique avec une marque, un fournisseur ou un article. */
+export interface PracticalToolLink {
+  id: number
+  type: PracticalToolLinkType
+  target: { id: number; name: string; reference: string | null }
+}
+
+/** Outil pratique tel que l'API le renvoie (le calcul est dans PRACTICAL_TOOLS). */
+export interface PracticalToolInfo {
+  slug: string
+  name: string
+  links: PracticalToolLink[]
+}
+
+/** Outil lié à une fiche (marque, fournisseur, article). */
+export interface RecordPracticalTool {
+  id: number
+  tool: string
+  name: string
+}
