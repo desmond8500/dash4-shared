@@ -358,6 +358,21 @@ describe('client API', () => {
     expect(fetch.mock.calls[3]?.[0]).not.toContain('unpaid')
   })
 
+  it('télécharge le quantitatif d\'un devis, entier ou par section', async () => {
+    const fetch = vi.fn().mockImplementation(async () => new Response('x', { status: 200 }))
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+
+    await api.quotes.quantities(7)
+    await api.quotes.quantities(7, { format: 'csv', sectionId: 12 })
+    await api.quotes.quantities(7, { neutral: true })
+
+    expect(fetch.mock.calls.map((c) => c[0])).toEqual([
+      'https://api.test/api/v1/quotes/7/quantities',
+      'https://api.test/api/v1/quotes/7/quantities?format=csv&section_id=12',
+      'https://api.test/api/v1/quotes/7/quantities?neutral=1',
+    ])
+  })
+
   it('gère les signatures d\'e-mail', async () => {
     const fetch = vi
       .fn()

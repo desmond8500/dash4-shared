@@ -1297,6 +1297,18 @@ export function createApiClient(options: ApiClientOptions) {
       async setSectionProposal(sectionId: number, proposal: string | null): Promise<Quote> {
         return (await request<Wrapped<Quote>>('PATCH', `quote-sections/${sectionId}`, { proposal })).data
       },
+      /**
+       * Quantitatif du devis, sans prix ni forfaits (main-d'œuvre) : toutes les sections visibles
+       * (avec un récapitulatif), ou une seule avec `sectionId`. PDF par défaut, ou CSV pour un tableur.
+       */
+      quantities(id: number, options: { format?: 'pdf' | 'csv'; sectionId?: number; neutral?: boolean } = {}): Promise<Blob> {
+        const params = new URLSearchParams()
+        if (options.format) params.set('format', options.format)
+        if (options.sectionId !== undefined) params.set('section_id', String(options.sectionId))
+        if (options.neutral !== undefined) params.set('neutral', options.neutral ? '1' : '0')
+        const query = params.toString()
+        return requestBlob(`quotes/${id}/quantities${query ? `?${query}` : ''}`)
+      },
       /** PDF de la proposition technique. */
       proposalPdf(id: number): Promise<Blob> {
         return requestBlob(`quotes/${id}/proposal-pdf`)
