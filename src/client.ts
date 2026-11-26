@@ -1862,6 +1862,11 @@ export function createApiClient(options: ApiClientOptions) {
       async remove(id: number): Promise<void> {
         await request('DELETE', `quote-templates/${id}`)
       },
+      /** Reprend le coût et le coefficient actuels des articles liés (articles supprimés ou sans coût ignorés). */
+      async refreshFromArticles(id: number): Promise<{ template: QuoteTemplate; updated: number; skipped: number; message: string }> {
+        const r = await request<{ data: QuoteTemplate; updated: number; skipped: number; message: string }>('POST', `quote-templates/${id}/refresh-from-articles`)
+        return { template: r.data, updated: r.updated, skipped: r.skipped, message: r.message }
+      },
       async fromSection(sectionId: number, payload: { name: string; description?: string | null; quote_system_id?: number | null }): Promise<QuoteTemplate> {
         return (await request<Wrapped<QuoteTemplate>>('POST', `quote-sections/${sectionId}/save-as-template`, payload)).data
       },

@@ -282,6 +282,17 @@ describe('client API', () => {
     expect(JSON.parse(fetch.mock.calls[1]?.[1]?.body)).toEqual({ template_id: 12 })
   })
 
+  it('met à jour les coûts d\'un modèle depuis les articles liés', async () => {
+    const fetch = vi.fn().mockResolvedValue(jsonResponse(200, { data: { id: 12, lines: [] }, updated: 2, skipped: 1, message: '2 ligne(s) mise(s) à jour depuis le stock.' }))
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+
+    const r = await api.quoteTemplates.refreshFromArticles(12)
+
+    expect(fetch.mock.calls[0]?.[0]).toBe('https://api.test/api/v1/quote-templates/12/refresh-from-articles')
+    expect(fetch.mock.calls[0]?.[1]?.method).toBe('POST')
+    expect(r).toMatchObject({ template: { id: 12 }, updated: 2, skipped: 1 })
+  })
+
   it('cherche un article par code-barres, le déplace et réceptionne un achat', async () => {
     const fetch = vi
       .fn()
