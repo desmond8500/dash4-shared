@@ -666,6 +666,24 @@ export interface AppSettings {
   next_numbers: Record<DocumentType, string>
   /** Relances de paiement : paliers en jours après l'échéance, envoi automatique au client. */
   reminders?: ReminderSettings
+  /** Articles achetés à l'étranger : taux du dollar, taxe (%) et frais de port (F CFA). */
+  import_costs?: ImportCostSettings
+}
+
+export interface ImportCostSettings {
+  usd_rate: number
+  tax_rate: number
+  shipping: number
+}
+
+/** Devises d'achat à l'étranger. */
+export type ForeignCurrency = 'EUR' | 'USD'
+
+/** Paramètres du coût d'un article acheté à l'étranger (l'euro a une parité fixe). */
+export interface ImportCostParameters {
+  rates: Record<ForeignCurrency, number>
+  tax_rate: number
+  shipping: number
 }
 
 export interface ReminderSettings {
@@ -673,8 +691,9 @@ export interface ReminderSettings {
   days: number[]
 }
 
-export type SettingsPayload = Partial<Omit<AppSettings, 'next_numbers' | 'numbering'>> & {
+export type SettingsPayload = Partial<Omit<AppSettings, 'next_numbers' | 'numbering' | 'import_costs'>> & {
   numbering?: Partial<Record<DocumentType, string>>
+  import_costs?: Partial<ImportCostSettings>
 }
 
 // ---------------------------------------------------------------------------
@@ -1361,6 +1380,9 @@ export interface Article {
   /** `costs.view`. */
   unit_cost?: number
   coefficient?: number
+  /** Acheté à l'étranger (`costs.view`) : prix en devise, d'où le coût en F CFA est calculé. */
+  foreign_price?: number | null
+  foreign_currency?: ForeignCurrency | null
   stock_value?: number
   /** Sur la fiche. */
   dependencies?: Array<{ id: number; designation: string; reference: string | null; unit: string | null; quantity: number; stock: number }>
@@ -1397,6 +1419,9 @@ export interface ArticlePayload {
   /** `costs.view`. */
   unit_cost?: number
   coefficient?: number
+  /** Prix en euro ou dollar : l'API en calcule le coût (`unit_cost`) ; `null` l'efface. */
+  foreign_price?: number | null
+  foreign_currency?: ForeignCurrency | null
   min_quantity?: number | null
   storage_location_id?: number | null
   /** Icône sur les plans (ses équipements la prennent). */

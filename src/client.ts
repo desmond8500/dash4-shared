@@ -116,6 +116,7 @@ import type {
   AppSettings,
   AttachableType,
   ContactableType,
+  ImportCostParameters,
   PracticalToolInfo,
   PracticalToolLink,
   PracticalToolLinkType,
@@ -1602,6 +1603,10 @@ export function createApiClient(options: ApiClientOptions) {
       },
       async summary(): Promise<StockSummary> {
         return (await request<Wrapped<StockSummary>>('GET', 'articles/summary')).data
+      },
+      /** Paramètres du coût des articles achetés à l'étranger (`costs.view`), pour l'aperçu du formulaire. */
+      async importCosts(): Promise<ImportCostParameters> {
+        return (await request<Wrapped<ImportCostParameters>>('GET', 'articles/import-costs')).data
       },
       /** Fiche : articles liés et 50 derniers mouvements. */
       async get(id: number): Promise<Article> {
