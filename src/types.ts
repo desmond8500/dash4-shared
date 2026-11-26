@@ -425,6 +425,8 @@ export interface AppNotification {
   body: string
   client_request_id?: number
   task_id?: number
+  /** Chantier affecté (`site.assigned`). */
+  project_id?: number
   tech_share_id?: number | null
   tech_access_request_id?: number
   comment_id?: number
