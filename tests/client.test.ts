@@ -405,6 +405,22 @@ describe('client API', () => {
     expect(downloadedFileName(new Blob(['x']), 'secours.pdf')).toBe('secours.pdf')
   })
 
+  it('duplique une section dans le même devis ou dans d\'autres devis', async () => {
+    const fetch = vi.fn().mockImplementation(async () =>
+      jsonResponse(200, { data: { id: 1 }, meta: { copied_to: [{ quote_id: 2, number: 'DEV-2', title: 'Vidéo', section_id: 9 }] } }),
+    )
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+
+    await api.quotes.duplicateSection(5)
+    const result = await api.quotes.duplicateSection(5, [2, 3])
+
+    expect(fetch.mock.calls[0]?.[0]).toBe('https://api.test/api/v1/quote-sections/5/duplicate')
+    expect(JSON.parse(fetch.mock.calls[0]?.[1]?.body)).toEqual({})
+    expect(JSON.parse(fetch.mock.calls[1]?.[1]?.body)).toEqual({ quote_ids: [2, 3] })
+    expect(result.copiedTo[0]?.number).toBe('DEV-2')
+    expect(result.quote.id).toBe(1)
+  })
+
   it('lie des contacts à un projet ou à un devis', async () => {
     const fetch = vi.fn().mockImplementation(async () => jsonResponse(200, { data: { id: 4 } }))
     const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })

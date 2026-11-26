@@ -3290,3 +3290,11 @@ export interface RecordPracticalTool {
   tool: string
   name: string
 }
+
+/** Section copiée par la duplication : devis de destination et section créée. */
+export interface QuoteSectionCopy {
+  quote_id: number
+  number: string
+  title: string
+  section_id: number
+}

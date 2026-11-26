@@ -121,6 +121,7 @@ import type {
   PracticalToolLinkType,
   RecordPracticalTool,
   QuoteEmailDocument,
+  QuoteSectionCopy,
   RecordContact,
   BankAccount,
   BankAccountPayload,
@@ -1341,6 +1342,18 @@ export function createApiClient(options: ApiClientOptions) {
       },
       async updateSection(sectionId: number, payload: { title?: string; is_visible?: boolean }): Promise<Quote> {
         return (await request<Wrapped<Quote>>('PATCH', `quote-sections/${sectionId}`, payload)).data
+      },
+      /**
+       * Duplique une section et son contenu : dans le même devis (juste après, « (copie) ») sans `quoteIds`,
+       * sinon à la fin de chacun de ces devis (brouillon ou envoyé). Renvoie le devis d'origine et les copies.
+       */
+      async duplicateSection(sectionId: number, quoteIds: number[] = []): Promise<{ quote: Quote; copiedTo: QuoteSectionCopy[] }> {
+        const body = await request<Wrapped<Quote> & { meta?: { copied_to?: QuoteSectionCopy[] } }>(
+          'POST',
+          `quote-sections/${sectionId}/duplicate`,
+          quoteIds.length ? { quote_ids: quoteIds } : {},
+        )
+        return { quote: body.data, copiedTo: body.meta?.copied_to ?? [] }
       },
       async removeSection(sectionId: number): Promise<Quote> {
         return (await request<Wrapped<Quote>>('DELETE', `quote-sections/${sectionId}`)).data
