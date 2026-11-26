@@ -116,6 +116,8 @@ import type {
   AppSettings,
   AttachableType,
   ContactableType,
+  ProjectTechnician,
+  SiteProject,
   ImportCostParameters,
   PracticalToolInfo,
   PracticalToolLink,
@@ -511,6 +513,18 @@ export function createApiClient(options: ApiClientOptions) {
     },
 
     sites: {
+      /** Chantiers que l'utilisateur peut ouvrir (technicien : affecté ou avec une tâche). */
+      async projects(): Promise<SiteProject[]> {
+        return (await request<Wrapped<SiteProject[]>>('GET', 'site-projects')).data
+      },
+      /** Techniciens affectés au projet (ils voient sa partie chantier seulement). */
+      async technicians(projectId: number): Promise<ProjectTechnician[]> {
+        return (await request<Wrapped<ProjectTechnician[]>>('GET', `projects/${projectId}/technicians`)).data
+      },
+      /** Remplace la liste des techniciens affectés ; ceux qui arrivent sont prévenus. */
+      async setTechnicians(projectId: number, userIds: number[]): Promise<ProjectTechnician[]> {
+        return (await request<Wrapped<ProjectTechnician[]>>('PUT', `projects/${projectId}/technicians`, { user_ids: userIds })).data
+      },
       async get(projectId: number): Promise<Site> {
         return (await request<Wrapped<Site>>('GET', `projects/${projectId}/site`)).data
       },

@@ -421,6 +421,22 @@ describe('client API', () => {
     expect(result.quote.id).toBe(1)
   })
 
+  it('affecte des techniciens à un chantier et liste « mes chantiers »', async () => {
+    const fetch = vi.fn().mockImplementation(async () => jsonResponse(200, { data: [] }))
+    const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })
+
+    await api.sites.projects()
+    await api.sites.technicians(4)
+    await api.sites.setTechnicians(4, [7, 8])
+
+    expect(fetch.mock.calls.map((c) => `${c[1]?.method} ${c[0]}`)).toEqual([
+      'GET https://api.test/api/v1/site-projects',
+      'GET https://api.test/api/v1/projects/4/technicians',
+      'PUT https://api.test/api/v1/projects/4/technicians',
+    ])
+    expect(JSON.parse(fetch.mock.calls[2]?.[1]?.body)).toEqual({ user_ids: [7, 8] })
+  })
+
   it('lie des contacts à un projet ou à un devis', async () => {
     const fetch = vi.fn().mockImplementation(async () => jsonResponse(200, { data: { id: 4 } }))
     const api = createApiClient({ baseUrl: 'https://api.test/api', storage: memoryStorage('t'), fetch })

@@ -3323,3 +3323,23 @@ export interface QuoteSectionCopy {
   title: string
   section_id: number
 }
+
+/** Technicien affecté à un projet : il en voit la partie chantier seulement. */
+export interface ProjectTechnician {
+  id: number
+  full_name: string
+  job_title: string | null
+}
+
+/** Chantier que l'utilisateur peut ouvrir (« Mes chantiers ») : aucune autre donnée du projet. */
+export interface SiteProject {
+  id: number
+  name: string
+  client: string | null
+  address: string | null
+  status: Labelled<ProjectStatus>
+  plans_count: number
+  /** Le technicien y est affecté (sinon il y a une tâche, ou c'est un gestionnaire). */
+  assigned: boolean
+  updated_at: string | null
+}
