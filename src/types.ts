@@ -788,6 +788,8 @@ export interface Quote {
   title: string
   status: Labelled<QuoteStatus>
   client_id: number
+  /** Nom du client propre à ce devis (null : celui de la fiche client). */
+  client_name?: string | null
   client?: { id: number; name: string } | null
   project_id: number | null
   project?: { id: number; name: string } | null
@@ -848,6 +850,7 @@ export interface Quote {
 export interface QuotePayload {
   client_uuid?: string
   client_id: number
+  client_name?: string | null
   project_id?: number | null
   title: string
   introduction?: string | null
